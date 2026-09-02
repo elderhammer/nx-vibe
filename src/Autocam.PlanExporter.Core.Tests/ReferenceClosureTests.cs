@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
-using Autocam.PlanExporter.Core.Dto;
-using Autocam.PlanExporter.Core.Plan;
+using Autocam.Plan.Core.Dto;
+using Autocam.Plan.Core.Plan;
 using Autocam.PlanExporter.Core.Tests.TestDoubles;
 using Xunit;
 

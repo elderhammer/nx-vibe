@@ -15,6 +15,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Autocam.PlanExporter.Core\Autocam.PlanExporter.Core.csproj" />
+    <ProjectReference Include="..\Autocam.Plan.Core\Autocam.Plan.Core.csproj" />
   </ItemGroup>
 
   <ItemGroup>

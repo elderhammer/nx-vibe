@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
-using Autocam.PlanExporter.Core.Dto;
+using Autocam.Plan.Core.Dto;
+using Autocam.Plan.Core.Diagnostics;
 
 namespace Autocam.PlanExporter.Core.Export
 {

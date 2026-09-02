@@ -228,11 +228,11 @@
           "description": "切削模式（FOLLOW_PART/FOLLOW_PERIPHERY/HILBERT/PARALLEL_LINES/PROFILE/…，非穷举）"
         },
         "cut_order": {
-          "enum": ["LEVEL_FIRST", "AREA_FIRST"],
+          "enum": ["LEVEL_FIRST", "AREA_FIRST", "DEPTH_FIRST"],
           "description": "切削顺序"
         },
         "cut_direction": {
-          "enum": ["CLIMB", "CONVENTIONAL"],
+          "enum": ["CLIMB", "CONVENTIONAL", "UP"],
           "description": "顺铣/逆铣"
         },
         "depth_per_cut": { "type": "number", "description": "每刀深度 mm" },

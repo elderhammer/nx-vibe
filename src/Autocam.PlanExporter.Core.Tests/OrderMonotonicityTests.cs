@@ -1,5 +1,5 @@
 using System.Linq;
-using Autocam.PlanExporter.Core.Dto;
+using Autocam.Plan.Core.Dto;
 using Autocam.PlanExporter.Core.Tests.TestDoubles;
 using Xunit;
 

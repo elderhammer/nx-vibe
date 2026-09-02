@@ -1,7 +1,7 @@
 using System.Linq;
 using Autocam.PlanExecutor.Core.Build;
 using Autocam.PlanExecutor.Core.Tests.TestDoubles;
-using Autocam.PlanExporter.Core.Plan;
+using Autocam.Plan.Core.Plan;
 using Autocam.PlanExporter.Core.Tests.TestDoubles;
 using Xunit;
 

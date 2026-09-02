@@ -1,0 +1,182 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$comment": "AutoCAM Plan 对比报告合同 v1 — PlanComparer 输出（nx-plugin-design.md §2.2 / plan-comparer.md §2.3）。与 autocam-plan.schema.json 同治理：报告页为外部消费者，序列化经同一 OrderedSnakeCaseContractResolver（字母序、null 省略）。评分公式（plan-comparer.md §4.6）：structure_consistency = matched_ops / max(|L_ops|, |R_ops|)；param_deviation_mean = 配对数值字段相对偏差均值 r = |Δ|/max(|L|,|R|)（双零→0）；geometry_match_rate = matched_features / max(|L_features|, |R_features|)；分母 0 → 1.0（空对空一致）。枚举封闭值均带 other 兜底（dev-pattern.md 反面清单 #4）。",
+  "title": "AutoCAM Plan Comparison Report (v1)",
+  "type": "object",
+  "required": ["report_id", "left", "right", "deviations", "summary", "scores", "diagnostics"],
+  "properties": {
+    "report_id": {
+      "type": "string",
+      "description": "确定性生成：cmp-{left.plan_id}-{right.plan_id}（plan-comparer.md §3.6）"
+    },
+    "left": { "$ref": "#/definitions/side" },
+    "right": { "$ref": "#/definitions/side" },
+    "deviations": {
+      "type": "array",
+      "description": "偏差行（只含非一致项，行序确定：维度固定序 → left workplan 前序 → 字段名序；plan-comparer.md §3.11）",
+      "items": { "$ref": "#/definitions/deviation" }
+    },
+    "summary": { "$ref": "#/definitions/summary" },
+    "scores": { "$ref": "#/definitions/scores" },
+    "toolpath": {
+      "description": "刀路维度预留通道（决策点 D5：MVP 不比较，恒缺省；后续适配层注入刀路统计）",
+      "type": ["object", "null"]
+    },
+    "diagnostics": {
+      "type": "array",
+      "description": "比较过程自身诊断（悬空引用/未知口径/对称碰撞/无法对齐；输入两侧 plan.diagnostics 留在各自 plan 内）",
+      "items": { "$ref": "#/definitions/diagnostic" }
+    }
+  },
+  "definitions": {
+    "side": {
+      "type": "object",
+      "required": ["plan_id"],
+      "description": "对比一侧的来源标识",
+      "properties": {
+        "plan_id": { "type": "string", "description": "该侧 plan 的 plan_id" },
+        "name": { "type": "string" },
+        "input_ref": { "type": "string" }
+      }
+    },
+    "deviation": {
+      "type": "object",
+      "required": ["dimension", "kind", "severity", "detail"],
+      "properties": {
+        "dimension": {
+          "type": "string",
+          "enum": ["structure", "tool", "parameter", "strategy", "mcs", "geometry", "toolpath", "other"],
+          "description": "七维度之一（plan-comparer.md §4.5；toolpath 预留）"
+        },
+        "operation_ref": {
+          "type": "string",
+          "description": "left 侧工序 operation_id；组级/setup 级行为空"
+        },
+        "field": {
+          "type": "string",
+          "description": "字段名（plan 字段路径，复合对象用点分路径如 stepover.value）"
+        },
+        "kind": {
+          "type": "string",
+          "enum": ["deviation", "missing", "extra", "type_mismatch", "order_swap", "known_skip", "unaligned", "other"],
+          "description": "deviation=双侧有值不一致；missing/extra=单侧缺；type_mismatch=同位置类型不同无法配对；order_swap=配对但位置不同；known_skip=重建侧能力跳过（info）；unaligned=引用悬空无法对齐"
+        },
+        "severity": {
+          "type": "string",
+          "enum": ["INFO", "WARNING", "ERROR"],
+          "description": "大写风格，与 plan 合同 diagnostic.level 同口径"
+        },
+        "left": {
+          "description": "left 侧值（任意 JSON：数值/枚举串/向量/复合对象）；单侧缺失时省略"
+        },
+        "right": {
+          "description": "right 侧值；单侧缺失时省略"
+        },
+        "delta": {
+          "type": "number",
+          "description": "有符号差 = right - left（数值字段；相对口径时为相对差）"
+        },
+        "tolerance": {
+          "type": "number",
+          "description": "判定位的容差值（口径见 plan-comparer.md §3.4 表）"
+        },
+        "detail": {
+          "type": "string",
+          "description": "人类可读描述（含口径出处）"
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "required": ["structure", "tool", "parameter", "strategy", "mcs", "geometry"],
+      "description": "分维度汇总计数（与 deviations 行一一可核对）",
+      "properties": {
+        "structure": { "$ref": "#/definitions/structure_summary" },
+        "tool": { "$ref": "#/definitions/dimension_summary" },
+        "parameter": { "$ref": "#/definitions/param_summary" },
+        "strategy": { "$ref": "#/definitions/param_summary" },
+        "mcs": { "$ref": "#/definitions/dimension_summary" },
+        "geometry": { "$ref": "#/definitions/geometry_summary" }
+      }
+    },
+    "structure_summary": {
+      "type": "object",
+      "required": ["matched_ops", "total_ops", "missing", "extra", "type_mismatches", "order_swaps", "group_diffs"],
+      "properties": {
+        "matched_ops": { "type": "integer", "description": "配对成功的工序对数" },
+        "total_ops": { "type": "integer", "description": "max(|L_ops|, |R_ops|)，评分分母" },
+        "missing": { "type": "integer", "description": "left 有 right 无的工序数" },
+        "extra": { "type": "integer", "description": "right 有 left 无的工序数" },
+        "type_mismatches": { "type": "integer", "description": "同位置类型不同无法配对的工序对数" },
+        "order_swaps": { "type": "integer", "description": "配对但工作顺序不同的工序数" },
+        "group_diffs": { "type": "integer", "description": "workplan 组树差异行数（改名/增/删）" }
+      }
+    },
+    "dimension_summary": {
+      "type": "object",
+      "required": ["compared", "matched", "missing", "extra", "deviations"],
+      "properties": {
+        "compared": { "type": "integer", "description": "参与对比的单元数（配对工序/配对 setup）" },
+        "matched": { "type": "integer", "description": "一致单元数" },
+        "missing": { "type": "integer", "description": "right 侧缺失的单元/字段数（left 有 right 无）" },
+        "extra": { "type": "integer", "description": "right 侧多出的单元/字段数（left 无 right 有）" },
+        "deviations": { "type": "integer", "description": "偏差行数（kind=deviation）" }
+      }
+    },
+    "param_summary": {
+      "type": "object",
+      "required": ["compared", "matched", "missing", "extra", "deviations", "known_skips"],
+      "properties": {
+        "compared": { "type": "integer", "description": "参与对比的字段数（键并集，双侧存在）" },
+        "matched": { "type": "integer", "description": "容差内一致的字段数" },
+        "missing": { "type": "integer", "description": "right 侧缺失的字段数（left 有 right 无）" },
+        "extra": { "type": "integer", "description": "right 侧多出且无跳过豁免的字段数（left 无 right 有）" },
+        "deviations": { "type": "integer", "description": "超容差字段数（kind=deviation）" },
+        "known_skips": { "type": "integer", "description": "重建侧能力跳过字段数（kind=known_skip，info，不计偏差）" }
+      }
+    },
+    "geometry_summary": {
+      "type": "object",
+      "required": ["compared", "matched", "missing", "extra", "deviations", "collisions"],
+      "properties": {
+        "compared": { "type": "integer", "description": "参与对比的锚点对数（配对工序中双侧有锚点）" },
+        "matched": { "type": "integer", "description": "0.01mm 内匹配的锚点对数" },
+        "missing": { "type": "integer", "description": "right 侧缺锚点的工序数（left 有 right 无）" },
+        "extra": { "type": "integer", "description": "right 侧多出锚点的工序数（left 无 right 有）" },
+        "deviations": { "type": "integer", "description": "锚点距离超容差的对数" },
+        "collisions": { "type": "integer", "description": "对称碰撞提示数（左锚点 0.01 内命中多个右锚点，warning）" }
+      }
+    },
+    "scores": {
+      "type": "object",
+      "required": ["structure_consistency", "param_deviation_mean", "geometry_match_rate"],
+      "properties": {
+        "structure_consistency": {
+          "type": "number",
+          "description": "matched_ops / max(|L_ops|, |R_ops|)，0/0→1.0；[0,1]"
+        },
+        "param_deviation_mean": {
+          "type": "number",
+          "description": "配对数值字段（strategy+technology+刀具数值字段）相对偏差均值，0=完全一致"
+        },
+        "geometry_match_rate": {
+          "type": "number",
+          "description": "matched_features / max(|L_features|, |R_features|)，0/0→1.0；[0,1]"
+        }
+      }
+    },
+    "diagnostic": {
+      "type": "object",
+      "required": ["level", "code", "detail"],
+      "description": "与 plan 合同 diagnostic 同形状（plan-exporter.md §4.7）",
+      "properties": {
+        "level": {
+          "type": "string",
+          "enum": ["INFO", "WARNING", "ERROR"]
+        },
+        "code": { "type": "string" },
+        "detail": { "type": "string" }
+      }
+    }
+  }
+}

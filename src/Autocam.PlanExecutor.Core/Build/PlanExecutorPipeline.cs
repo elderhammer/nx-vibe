@@ -1,11 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Autocam.PlanExecutor.Core.Policies;
-using Autocam.PlanExporter.Core.Dto;
-using Autocam.PlanExporter.Core.Export;
-using Autocam.PlanExporter.Core.Plan;
-using Autocam.PlanExporter.Core.Policies;
+using Autocam.Plan.Core.Dto;
+using Autocam.Plan.Core.Plan;
+using Autocam.Plan.Core.Policies;
+using Autocam.Plan.Core.Diagnostics;
 
 namespace Autocam.PlanExecutor.Core.Build
 {

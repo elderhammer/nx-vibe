@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Autocam.PlanComparer.Core\Autocam.PlanComparer.Core.csproj" />
+    <ProjectReference Include="..\Autocam.Plan.Core\Autocam.Plan.Core.csproj" />
+    <!-- 复用导出器测试的夹具（PlanFixtures/SchemaAsset）；执行器 Core 供零基线测试 Build -->
+    <ProjectReference Include="..\Autocam.PlanExporter.Core.Tests\Autocam.PlanExporter.Core.Tests.csproj" />
+    <ProjectReference Include="..\Autocam.PlanExecutor.Core\Autocam.PlanExecutor.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- schema 是测试资产：schema 变更直接触发契约测试红，双向锁定（plan-comparer.md §3.11-1） -->
+    <None Include="..\..\schema\autocam-compare-report.schema.json" Link="Schema\autocam-compare-report.schema.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\schema\autocam-plan.schema.json" Link="Schema\autocam-plan.schema.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>
