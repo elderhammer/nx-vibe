@@ -1,6 +1,6 @@
 # NX 适配层分析 — 数据结构 / 性质 / 验证计划
 
-> 更新时间：2026-09-02
+> 更新时间：2026-09-03（M2 执行侧 / M3 完整闭环 GUI 会话实测达标）
 > 分析对象：nx-plugin-design.md §4 定义的 NX 适配层 ×2 + 插件宿主（三步闭环第①②步的
 > NX 侧桥接）
 > 前置阅读：[nx-plugin-design.md](./nx-plugin-design.md)、[nxopen-research.md](./nxopen-research.md)、
@@ -126,8 +126,8 @@ Program 前序 → 工序叶子序）；每命令 try/finally 保证 Builder Des
 | :--- | :--- | :--- |
 | M0 | API 预研 journal（5 个未知点，见核对清单） | ✅ 5 点全答 + 发现批处理对象模板限制（详见核对清单） |
 | M1 | 导出侧适配器 | ✅ 批处理实测：schema 0 错、两次导出字节一致、15 工序/4 刀具/1 setup 双射覆盖、无 ERROR（公制模板） |
-| M2 | 执行侧适配器 | 🔧 代码编译级验证通过；批处理下 Create 受模板注册表限制（如实输出），完整执行验证在 GUI 会话 |
-| M3 | 最小闭环 | 🔧 批处理部分闭环 ✅（真实零件导出×2 → 自对比零偏差 + 报告 0 校验错）；完整闭环（重建+跨件对比）待 GUI |
+| M2 | 执行侧适配器 | ✅ GUI 会话实测（2026-09-03）：28/28 命令全执行、prj′ 落盘回读一致、technology 98/98 匹配、MCS 反射落点正确（mcs 1/1 偏差 0）。调试链见核对清单 M2 节（模板键语义 / find-or-create / 根组名解析 / 枚举宽松匹配） |
+| M3 | 最小闭环 | ✅ 完整闭环（2026-09-03）：导出→重建→再导出→Compare 全链跑通；structure=1.0（plan 合同无歧义重建实证）；deviations=19 全归因（tool 表达力 ×11 + VolumeBased 写路径 ×8，无 Core 缺陷）。批处理部分闭环 ✅（自对比零偏差） |
 
 ## 7. 风险与边界
 
@@ -137,4 +137,7 @@ Program 前序 → 工序叶子序）；每命令 try/finally 保证 Builder Des
 | 嵌套 Program 组 API 能力 | M0 已答：CreateProgram(parent, …) 原生支持 |
 | Inheritable 在真实 NX 的差异 | M3 偏差显形并归因，不静默 |
 | 许可/版本差异 | CapabilityProfile 探测（MVP 返空画像 + 登记；逐参数版本探测后补） |
-| **批处理下对象模板注册表不加载**（M0 实测） | **导出侧不受影响（纯读）**；执行侧（组/工序 Create）在批处理下不可行——适配器代码编译级验证，执行验证移交交互式 NX（GUI 会话，核对清单 M2/M3 节）；组/工序创建前的模板注册留待 NX 侧验证（AddTemplateType 单位匹配后重试） |
+| 模板注册表仅真 GUI 会话加载（M0 + 2026-09-03 三态实测） | 批处理与 run_journal 交互会话均缺组/工序 subtype 注册（Create 必失败「需要的模板不存在」，打开 CAM 零件预热无效）；导出侧纯读不受影响；执行侧须在用户已进入加工环境的真会话跑**编译入口 EXE**（vbc 编 VB 装载器 → File → Execute → NX Open，核对清单 M2 节） |
+| Create* 键语义 + 模板默认组（2026-09-03 实测） | 键 = (setup 族, subtype)（如 `CreateMethod(parent,"mill_planar","MILL_METHOD",…)`），旧式 typeName 全失效——executor 键表化见 NxTemplateKeys（含 plan 导出类型→mill_planar 族 Operation subtype 反向映射，探针 M2_Probe2 ③ 实测建表）；GUI 会话新 setup 自带模板默认组（PROGRAM/MILL_ROUGH/MCS_MAIN…）→ 组命令 find-or-create 复用；plan 根/约定组名 == 视图根组名（NC_PROGRAM/METHOD）→ 根组即目标组 |
+| 参数写路径按 builder 类型覆盖不全（VolumeBased25D 系） | M3 strategy 8 条偏差归因：路径缺失 → Set 跳过（warning）→ 继承新 subtype 模板默认（0.2/1.0/LEVEL_FIRST）。修法：NxParamPaths 按 builder 类型参数子集表扩展（README 遗留 3 的适配层版本） |
+| plan 工具合同表达力（模板工件/空参数刀具组） | M3 tool 11 条 extra 归因：合同带不出非标准组 → 重建默认物化 → 再导出数量漂移 + 默认值字段（T-005 幻影 = 导出收编默认空组）。修法：导出侧过滤不可读/模板工件组或合同增强，清零 tool 维度 |
