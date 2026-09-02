@@ -6,7 +6,7 @@
 > 该闭环既验证 plan.json 合同是否无歧义，也为后续 CAPP 自动生成的工序提供校准基准。
 >
 > 前置阅读：[nxopen-research.md](./nxopen-research.md)（NXOpen API 能力全景 + Builder 参数面 + 回读能力）。
-> Plan 合同：[autocam-plan.schema.json](../schema/autocam-plan.schema.json)（导出与导入共用同一合同）。
+> Plan 合同：[autocam-plan.schema.json](./schema/autocam-plan.schema.json)（导出与导入共用同一合同）。
 
 ---
 

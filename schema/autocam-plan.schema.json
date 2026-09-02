@@ -1,0 +1,405 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$comment": "AutoCAM Plan 合同 v3 — PlanExporter 导出 / PlanExecutor 导入共用（nx-plugin-design.md §1）。必填最小集：plan_id / operations / workingsteps / workplan；其余字段可选，导出完整性由 PlanExporter 后置条件与 diagnostics[] 把关（plan-exporter.md §3.3）。枚举值统一大写风格；operation_type 按 nxopen-research.md §4.2 保持小写蛇形。draft-07：net48 侧可用 NJsonSchema（MIT）校验（Newtonsoft.Json.Schema 为商业许可，不引入）。",
+  "title": "AutoCAM Plan (v3)",
+  "type": "object",
+  "required": ["plan_id", "operations", "workingsteps", "workplan"],
+  "properties": {
+    "plan_id": {
+      "type": "string",
+      "description": "plan 唯一标识，导出侧确定性生成（plan-exporter.md §3.1e）"
+    },
+    "input_ref": {
+      "type": "string",
+      "description": "输入工件引用（STEP 文件名/路径等）"
+    },
+    "name": {
+      "type": "string",
+      "description": "plan 显示名"
+    },
+    "setups": {
+      "type": "array",
+      "description": "装夹设置（nxopen-research.md §4.7）",
+      "items": { "$ref": "#/definitions/setup" }
+    },
+    "resources": { "$ref": "#/definitions/resources" },
+    "features": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/feature" }
+    },
+    "operations": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/operation" }
+    },
+    "workingsteps": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/workingstep" }
+    },
+    "workplan": { "$ref": "#/definitions/workplan" },
+    "diagnostics": {
+      "type": "array",
+      "description": "info/warning/error 诊断条目（plan-exporter.md §4.7）",
+      "items": { "$ref": "#/definitions/diagnostic" }
+    }
+  },
+  "definitions": {
+    "vector3": {
+      "type": "array",
+      "description": "三维向量/点，[x, y, z]，mm，模型局部坐标",
+      "items": { "type": "number" },
+      "minItems": 3,
+      "maxItems": 3
+    },
+    "mcs": {
+      "type": "object",
+      "description": "加工坐标系（MillOrientGeomBuilder.mcs 回读；nxopen-research.md §4.7）",
+      "properties": {
+        "origin": { "$ref": "#/definitions/vector3" },
+        "z_axis": { "$ref": "#/definitions/vector3" },
+        "x_axis": { "$ref": "#/definitions/vector3" }
+      }
+    },
+    "setup": {
+      "type": "object",
+      "required": ["setup_id"],
+      "properties": {
+        "setup_id": {
+          "type": "string",
+          "description": "setup 唯一标识，workingsteps[].setup_ref 引用对象"
+        },
+        "mcs": { "$ref": "#/definitions/mcs" },
+        "safe_plane_z": {
+          "type": "number",
+          "description": "安全平面高度 mm（MVP 标量口径；clearance 对象结构留作增强，nxopen-research.md §4.7）"
+        },
+        "fixture_offset": {
+          "type": "integer",
+          "description": "夹具偏置号，G54=1，G55=2…"
+        }
+      }
+    },
+    "tool": {
+      "type": "object",
+      "required": ["tool_id"],
+      "properties": {
+        "tool_id": {
+          "type": "string",
+          "description": "刀具唯一标识，operations[].tool_ref 引用对象"
+        },
+        "type": {
+          "type": "string",
+          "pattern": "^[A-Z][A-Z0-9_]*$",
+          "description": "刀具类型（平底/球头/牛鼻/T 型/倒角/钻头/丝锥…，非穷举，大写风格）"
+        },
+        "diameter": { "type": "number", "description": "刀具直径 mm" },
+        "num_flutes": { "type": "integer", "description": "刃数" },
+        "flute_length": { "type": "number", "description": "刃长 mm" },
+        "lower_corner_radius": { "type": "number", "description": "底部圆角半径 mm（牛鼻刀 R）" }
+      }
+    },
+    "resources": {
+      "type": "object",
+      "properties": {
+        "tools": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/tool" }
+        }
+      }
+    },
+    "geometry_ref": {
+      "type": "object",
+      "required": ["anchor_point"],
+      "description": "稳定几何锚点（nxopen-research.md §4.6）：face_ids/edge_ids 为 OCCT 遍历 ID，由云端 STEP 侧按属性锚点匹配后回填；anchor_point 为无面映射能力时的兜底",
+      "properties": {
+        "face_ids": {
+          "type": "array",
+          "description": "OCCT 遍历 ID（原始 STEP B-Rep 面，来自云端 geometry.json faces[]）",
+          "items": { "type": "string" }
+        },
+        "edge_ids": {
+          "type": "array",
+          "description": "OCCT 遍历 ID（原始 STEP B-Rep 边）",
+          "items": { "type": "string" }
+        },
+        "anchor_point": {
+          "$ref": "#/definitions/vector3",
+          "description": "特征位置（孔心/质心），模型局部坐标"
+        }
+      }
+    },
+    "feature": {
+      "type": "object",
+      "required": ["feature_id"],
+      "properties": {
+        "feature_id": {
+          "type": "string",
+          "description": "特征唯一标识，workingsteps[].feature_ref 引用对象"
+        },
+        "feature_type": {
+          "type": "string",
+          "description": "AP224 15 类特征分类（外部契约 capp-operation-mapping-table.md）"
+        },
+        "geometry_ref": { "$ref": "#/definitions/geometry_ref" },
+        "params": {
+          "type": "object",
+          "description": "特征参数（直径/深度/螺距…），按特征类型开放（nxopen-research.md §4.6）"
+        }
+      }
+    },
+    "nx_template": {
+      "type": "object",
+      "description": "NX 操作类型原始标识，近似工序按此真实类型落地（nxopen-research.md §4.2、nx-plugin-design.md §6）",
+      "properties": {
+        "type": {
+          "type": "string",
+          "description": "NX 操作 typeName，如 CAVITY_MILL"
+        },
+        "subtype": {
+          "type": "string",
+          "description": "NX 操作 subtypeName，可为空串"
+        }
+      }
+    },
+    "stepover": {
+      "type": "object",
+      "description": "步距（Percent 或 Value，对应 MillCutParameters.Stepover）",
+      "properties": {
+        "mode": { "enum": ["PERCENT", "VALUE"] },
+        "value": { "type": "number" }
+      }
+    },
+    "depth": {
+      "type": "object",
+      "description": "孔深定义（对应 HoleMachiningBuilder.PredefinedDepth）",
+      "properties": {
+        "mode": {
+          "enum": ["THROUGH", "BLIND", "VALUE"],
+          "description": "通孔/盲孔/深度值"
+        },
+        "value": { "type": "number" }
+      }
+    },
+    "clearance": {
+      "type": "object",
+      "description": "安全几何（NcmClearanceBuilder；nxopen-research.md §4.3）",
+      "properties": {
+        "type": {
+          "enum": ["AUTO", "PLANE", "POINT", "CYLINDER", "SPHERE", "BOX", "BODY"],
+          "description": "安全几何类型（自动/平面/点/圆柱/球/包围盒/体）"
+        },
+        "safe_distance": { "type": "number", "description": "安全距离 mm" },
+        "origin": { "$ref": "#/definitions/vector3" },
+        "normal": { "$ref": "#/definitions/vector3" },
+        "radius": { "type": "number", "description": "圆柱/球半径" }
+      }
+    },
+    "engage_retract": {
+      "type": "object",
+      "description": "进刀/退刀策略（NcmPlanarEngRetBuilder：策略+距离+角度）",
+      "properties": {
+        "type": {
+          "type": "string",
+          "pattern": "^[A-Z][A-Z0-9_]*$",
+          "description": "策略类型（HELICAL/…，非穷举，大写风格）"
+        },
+        "diameter_percent": { "type": "number" },
+        "angle": { "type": "number" },
+        "distance": { "type": "number" }
+      }
+    },
+    "non_cutting": {
+      "type": "object",
+      "description": "非切削移动（NcmPlanarBuilder）。avoidance 点/层间转移/预钻孔点为可选增强，暂不进 MVP",
+      "properties": {
+        "clearance": { "$ref": "#/definitions/clearance" },
+        "approach": { "$ref": "#/definitions/engage_retract" },
+        "engage": { "$ref": "#/definitions/engage_retract" },
+        "retract": { "$ref": "#/definitions/engage_retract" },
+        "final": { "$ref": "#/definitions/engage_retract" }
+      }
+    },
+    "strategy": {
+      "type": "object",
+      "description": "切削策略（nxopen-research.md §4.3）。字段全部可选：必填性由导出侧 diagnostics 把关；枚举统一大写风格",
+      "properties": {
+        "cut_pattern": {
+          "type": "string",
+          "pattern": "^[A-Z][A-Z0-9_]*$",
+          "description": "切削模式（FOLLOW_PART/FOLLOW_PERIPHERY/HILBERT/PARALLEL_LINES/PROFILE/…，非穷举）"
+        },
+        "cut_order": {
+          "enum": ["LEVEL_FIRST", "AREA_FIRST"],
+          "description": "切削顺序"
+        },
+        "cut_direction": {
+          "enum": ["CLIMB", "CONVENTIONAL"],
+          "description": "顺铣/逆铣"
+        },
+        "depth_per_cut": { "type": "number", "description": "每刀深度 mm" },
+        "stepover": { "$ref": "#/definitions/stepover" },
+        "finish_passes": { "type": "integer", "description": "精加工刀数" },
+        "multi_depth_cut": { "type": "boolean", "description": "多层切削开关" },
+        "part_stock": { "type": "number", "description": "侧壁余量 mm" },
+        "floor_stock": { "type": "number", "description": "底面余量 mm" },
+        "wall_stock": { "type": "number", "description": "壁余量 mm" },
+        "wall_cleanup": {
+          "type": "string",
+          "pattern": "^[A-Z][A-Z0-9_]*$",
+          "description": "侧壁清根类型（NX WallCleanupType，非穷举）"
+        },
+        "tool_axis": { "$ref": "#/definitions/vector3" },
+        "cycle": {
+          "type": "string",
+          "pattern": "^[A-Z][A-Z0-9_]*$",
+          "description": "钻孔循环（DRILL/PECK/TAP/BORE/REAM/…，非穷举）"
+        },
+        "depth": { "$ref": "#/definitions/depth" },
+        "bottom_stock": { "type": "number", "description": "底部余量 mm" },
+        "bottom_clearance": {
+          "type": "number",
+          "description": "底部间隙 mm（NX2312 新增，按版本能力探测）"
+        },
+        "top_offset": { "type": "number", "description": "顶部偏置 mm（从孔口/面起算）" },
+        "control_point_offset": {
+          "enum": ["TOP", "BOTTOM", "AUTO"],
+          "description": "控制点偏置方式（孔顶/孔底/自动）"
+        },
+        "retract_output_mode": {
+          "enum": ["CLEARANCE_PLANE", "INCREMENTAL"],
+          "description": "退刀输出模式（退到安全平面/增量）"
+        },
+        "tool_drive_point": {
+          "enum": ["TIP", "CENTER"],
+          "description": "刀具驱动点（刀尖/球心）"
+        },
+        "cross_over_distance": { "type": "number", "description": "越程距离 mm" },
+        "non_cutting": { "$ref": "#/definitions/non_cutting" }
+      }
+    },
+    "feed": {
+      "type": "object",
+      "description": "进给值 + 单位（mm/min 或 mm/rev，由单位字段决定）",
+      "properties": {
+        "value": { "type": "number" },
+        "unit": {
+          "type": "string",
+          "pattern": "^[A-Z][A-Z0-9_]*$",
+          "description": "单位（MMPM/MMPR/…）"
+        }
+      }
+    },
+    "tolerance": {
+      "type": "object",
+      "description": "轮廓内外公差 mm（MillCutParameters.BoundaryInTol/OutTol）",
+      "properties": {
+        "intol": { "type": "number" },
+        "outtol": { "type": "number" }
+      }
+    },
+    "technology": {
+      "type": "object",
+      "description": "进给/转速/冷却/公差（nxopen-research.md §4.4）。字段全部可选：必填性由导出侧 diagnostics 把关",
+      "properties": {
+        "spindle_mode": {
+          "enum": ["RPM", "SFM", "MMPM"],
+          "description": "主轴模式"
+        },
+        "spindle_rpm": { "type": "number", "description": "主轴转速 rpm" },
+        "surface_speed": {
+          "type": "number",
+          "description": "表面速度 m/min，与 rpm 二选一"
+        },
+        "feed_cut": { "$ref": "#/definitions/feed" },
+        "feed_approach": { "$ref": "#/definitions/feed" },
+        "feed_engage": { "$ref": "#/definitions/feed" },
+        "feed_departure": { "$ref": "#/definitions/feed" },
+        "retract_speed": { "type": "number", "description": "退刀速度" },
+        "coolant": {
+          "enum": ["ON", "MIST", "FLOOD", "THROUGH"],
+          "description": "冷却类型"
+        },
+        "tolerance": { "$ref": "#/definitions/tolerance" },
+        "minimal_clearance": {
+          "type": "number",
+          "description": "孔加工最小间隙 mm（HoleMachiningCutParameters.minimalClearance）"
+        }
+      }
+    },
+    "operation": {
+      "type": "object",
+      "required": ["operation_id", "operation_type"],
+      "properties": {
+        "operation_id": {
+          "type": "string",
+          "description": "工序唯一标识，workingsteps[].operation_ref 引用对象"
+        },
+        "operation_type": {
+          "enum": [
+            "mill_cavity", "mill_planar", "mill_face", "mill_plunge", "mill_groove",
+            "mill_zlevel", "mill_surface", "mill_flowcut", "mill_chamfer", "mill_engrave", "mill_cylinder",
+            "drill_center", "drill", "drill_peck", "drill_break_chip", "tap", "thread_mill",
+            "ream", "bore", "counterbore", "countersink",
+            "turn_rough", "turn_finish", "turn_thread", "turn_drill", "turn_mill",
+            "multi_axis_rough", "multi_axis_wall_finish", "multi_axis_deburr",
+            "wedm", "additive_planar", "additive_rotary", "probe", "machine_control", "user_defined",
+            "other"
+          ],
+          "description": "工序层分类（nxopen-research.md §4.2 全表 + other 兜底：导出侧类型映射未命中时落 other，原始 typeName 保留进 nx_template）"
+        },
+        "nx_template": { "$ref": "#/definitions/nx_template" },
+        "tool_ref": {
+          "type": "string",
+          "description": "指向 resources.tools[].tool_id；引用闭合由导出侧校验（plan-exporter.md §3.3-4）"
+        },
+        "strategy": { "$ref": "#/definitions/strategy" },
+        "technology": { "$ref": "#/definitions/technology" }
+      }
+    },
+    "workingstep": {
+      "type": "object",
+      "required": ["workingstep_id"],
+      "properties": {
+        "workingstep_id": {
+          "type": "string",
+          "description": "工步唯一标识，workplan 节点通过 workingstep_ref 引用"
+        },
+        "feature_ref": { "type": "string", "description": "指向 features[].feature_id" },
+        "operation_ref": { "type": "string", "description": "指向 operations[].operation_id" },
+        "setup_ref": { "type": "string", "description": "指向 setups[].setup_id" }
+      }
+    },
+    "workplan_node": {
+      "type": "object",
+      "description": "Program 组树前序投影节点：组节点带 name+children，工序叶子带 workingstep_ref（plan-exporter.md §4.2）",
+      "properties": {
+        "name": { "type": "string" },
+        "workingstep_ref": { "type": "string" },
+        "children": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/workplan_node" }
+        }
+      }
+    },
+    "workplan": {
+      "type": "object",
+      "required": ["root", "elements"],
+      "properties": {
+        "root": { "$ref": "#/definitions/workplan_node" },
+        "elements": {
+          "type": "array",
+          "description": "Program 树前序遍历的扁平列表（保序投影，plan-exporter.md §3.1c）",
+          "items": { "$ref": "#/definitions/workplan_node" }
+        }
+      }
+    },
+    "diagnostic": {
+      "type": "object",
+      "required": ["level"],
+      "properties": {
+        "level": { "enum": ["INFO", "WARNING", "ERROR"] },
+        "code": { "type": "string" },
+        "detail": { "type": "string" }
+      }
+    }
+  }
+}
