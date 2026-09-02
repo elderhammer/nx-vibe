@@ -1,24 +1,25 @@
-# Autocam.PlanExporter / PlanExecutor
+# Autocam.PlanExporter / PlanExecutor / PlanComparer
 
-三步闭环第①②步（ground truth 采集 / 自动重建）的实现。设计依据：
+三步闭环（ground truth 采集 / 自动重建 / 对比验证）的实现。设计依据：
 [plan-exporter.md](../plan-exporter.md)、[plan-executor.md](../plan-executor.md)、
-[nx-plugin-design.md](../nx-plugin-design.md)、[nxopen-research.md](../nxopen-research.md)。
+[plan-comparer.md](../plan-comparer.md)、[nx-plugin-design.md](../nx-plugin-design.md)、
+[nxopen-research.md](../nxopen-research.md)。
 开发模式：[dev-pattern.md](../dev-pattern.md)。
-合同：[schema/autocam-plan.schema.json](../schema/autocam-plan.schema.json)。
+合同：[schema/autocam-plan.schema.json](../schema/autocam-plan.schema.json) +
+[schema/autocam-compare-report.schema.json](../schema/autocam-compare-report.schema.json)。
 
 ## 结构
 
 | 项目 | 说明 |
 |---|---|
-| `Autocam.PlanExporter.Core` | 纯 C#（net48，零 NXOpen）：快照 DTO + 导出管线 + 序列化/schema 校验（含 PlanDeserializer，即 PlanParser 轻量版） |
+| `Autocam.Plan.Core` | 共享合同层：plan 模型 / 快照 DTO / 能力画像 / 诊断 / 策略表（TypeMapper/ParamRegistry/MethodGroupNaming）/ 序列化 + schema 校验（rule of three 抽取，决策点 D1） |
+| `Autocam.PlanExporter.Core` | 纯 C#（net48，零 NXOpen）：导出管线（快照 → plan 对象图） |
 | `Autocam.PlanExecutor.Core` | 纯 C#（net48，零 NXOpen）：plan → 有序参数化命令序列 + 模拟快照 S′ |
+| `Autocam.PlanComparer.Core` | 纯 C#（net48，零 NXOpen）：plan×plan → 偏差报告（对齐 + 容差引擎 + 七维度 + 评分） |
 | `Autocam.PlanExporter.Core.Tests` | xUnit：12 套件 56 用例，零 NX 依赖 |
 | `Autocam.PlanExecutor.Core.Tests` | xUnit：8 套件 31 用例，零 NX 依赖（复用导出器夹具做 round-trip） |
-| （未建）NX 适配层 ×2 | 薄壳：NX API → `CamSetupSnapshot`（导出侧）；命令序列 → NX Builder 调用（执行侧）。需 NX SDK，后续在 NX 侧集成验证 |
-
-> 共享合同层（PlanModel/CapabilityProfile/DiagnosticsCollector/TypeMapper/ParamRegistry/
-> Serialization）目前落在 PlanExporter.Core；第三个消费者（PlanComparer）出现时按
-> rule of three 抽取公共项目。
+| `Autocam.PlanComparer.Core.Tests` | xUnit：13 套件 48 用例，零 NX 依赖（复用导出器夹具做零基线验证） |
+| （未建）NX 适配层 ×2 | 薄壳：NX API → `CamSetupSnapshot`（导出侧）；命令序列 → NX Builder 调用（执行侧）。需 NX SDK，后续在 NX 侧集成验证（对比侧无适配层——复用两侧导出） |
 
 ## 隔离设计（对应两份性质文档）
 
@@ -35,6 +36,11 @@
 - **失败隔离**（I7 镜像）：引用悬空/类型不可映射/能力不支持只影响单条目或单参数。
 - **策略数据与遍历逻辑隔离**：TypeMapper 正/反向表、ParamRegistry、方法组约定命名表
   均为数据表，扩表不改码。
+- **对比的对齐保真**（plan-comparer.md §3.3）：类型多重集相等 → 实例序配对（纯置换
+  只报 order_swap）；不等 → 贪心配对（匹配数 = LCS 最大长度）+ 同位置 type_mismatch。
+  配对表是七维度字段比较的唯一入口，未配对工序绝不产生参数/刀具/几何偏差行。
+- **对比的对称口径**（§3.2）：容差判定用 |Δ|、评分分母取 max、missing ↔ extra 互换——
+  左右互换报告结论不漂移；评分公式只吃容差口径数值字段（§2.3），可逐行复算。
 
 ## 关键决策（已拍板，详见两份性质文档）
 
@@ -45,8 +51,11 @@
   PlanComparer 对比方法组维度时按同一表归一
 - workplan 节点形状 `{name, workingstep_ref, children}` 已由执行器作为第一个消费方确认
 - 几何兜底：MVP 用 anchor_point（模拟器合成面），face_ids 到位后 FaceResolver 升级
-- 类名 `PlanExportPipeline`/`PlanExecutorPipeline`（类名与命名空间段同名存在 C# 简单名冲突）
+- 类名 `PlanExportPipeline`/`PlanExecutorPipeline`/`PlanComparePipeline`（类名与命名空间段同名存在 C# 简单名冲突）
 - schema 校验库用 NJsonSchema（MIT；Newtonsoft.Json.Schema 为商业许可）
+- 对比决策 D2-D7（plan-comparer.md §7 决策记录）：位置归一对齐 / 报告立 schema /
+  容差表（0.01mm 绝对、5% 相对、枚举精确、向量欧氏）/ 刀路维度预留 / 已知跳过按
+  能力画像结构化判定 / 逐条偏差行 + 汇总评分双粒度
 
 ## 测试套件 ↔ 性质映射
 
@@ -55,12 +64,14 @@ SchemaContract、Determinism、ResolvedValue、OrderMonotonicity、ReferenceClos
 Bijection、FailureIsolation、TypeMapping、Anchor、Precondition、DiagnosticsContract、
 UnitConvention、PlanDeserializer。执行侧：
 RoundTrip、CommandOrder、GroupTreeRebuild、InheritanceSemantics、Precondition、
-Mapping、Capability、DiagnosticsContract。
+Mapping、Capability、DiagnosticsContract。对比侧：
+Reflexivity、Symmetry、Alignment、ToleranceBoundary、ToolComparison、ParamComparison、
+McsGeometry、Scoring、ReportContract、KnownSkip、Determinism、ZeroBaseline、Precondition。
 
 ## 运行
 
 ```bash
-dotnet test Autocam.PlanExporter.sln   # 87 用例，net48，零 NX 依赖
+dotnet test Autocam.PlanExporter.sln   # 135 用例，net48，零 NX 依赖
 ```
 
 schema 文件作为测试资产拷入输出目录——schema 变更直接触发契约测试红，双向锁定。
@@ -70,6 +81,6 @@ schema 文件作为测试资产拷入输出目录——schema 变更直接触发
 1. NX 适配层 ×2：导出侧（CAMSetup/Builder/几何 API → 快照，含生效值/能力/许可探测）、
    执行侧（命令序列 → NXOpen 调用 + STEP 打开）
 2. NX 内最小闭环集成验证：手编工程 → 导出 → 同一工程内重建 → 对比（nx-plugin-design.md §4）
-3. PlanComparer（纯函数 plan×plan，依赖已固化的单调性/确定性性质）
-4. FaceResolver（OCCT face_id → NX Tag 匹配；MVP 由 anchor_point 兜底）
-5. schema 增强字段（非切削细分/避让点/多轴驱动）按"可选增强"后补
+3. 对比增强：刀路维度（schema 已预留 toolpath 通道，待适配层注入）、
+   几何维度 FaceResolver 面集匹配升级（MVP 由 anchor_point 兜底）
+4. schema 增强字段（非切削细分/避让点/多轴驱动）按"可选增强"后补

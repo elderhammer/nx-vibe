@@ -1,11 +1,14 @@
 # 开发模式：性质驱动的测试先行
 
 > 更新时间：2026-09-02
-> 定位：PlanExporter 的开发方法论总结，供 PlanComparer / FaceResolver / NX 适配层等
-> 后续模块复用。实践样本：[plan-exporter.md](./plan-exporter.md) + [plan-executor.md](./plan-executor.md)
-> + [src/](../src/)（导出器 56 用例 + 执行器 31 用例，全绿）。
+> 定位：PlanExporter 的开发方法论总结，供 FaceResolver / NX 适配层等后续模块复用。
+> 实践样本：[plan-exporter.md](./plan-exporter.md) + [plan-executor.md](./plan-executor.md)
+> + [plan-comparer.md](./plan-comparer.md) + [src/](../src/)
+> （导出器 56 + 执行器 31 + 对比器 48 用例，全绿）。
 > 关联文档：[nx-plugin-design.md](./nx-plugin-design.md)、
-> [schema/autocam-plan.schema.json](./schema/autocam-plan.schema.json)、[src/README.md](./src/README.md)
+> [schema/autocam-plan.schema.json](./schema/autocam-plan.schema.json)、
+> [schema/autocam-compare-report.schema.json](./schema/autocam-compare-report.schema.json)、
+> [src/README.md](./src/README.md)
 
 ---
 
@@ -17,6 +20,9 @@
 PlanExporter 的实际轨迹：**53 红 / 1 绿（桩实现）→ 54 绿（实现完成）**，
 且测试在实现期抓到过真实 bug（组装器忘了 `plan.Resources.Tools.Add`，
 被引用闭合测试当场揪出）——防御性校验在实现期就回本。
+PlanComparer 的轨迹：**48 红 → 41 绿（首实现）→ 48 绿**——首实现的 7 红全部是
+真问题：对齐决胜歧义（LCS 回溯两端拉扯 → 换贪心配对）、missing/extra 口径左右写反、
+容差边界测试被浮点表示误差翻转（0.0 vs 0.01 精确运算才是合法边界值）。
 
 ## 1. 前提条件：性质文档先行
 
@@ -24,9 +30,9 @@ PlanExporter 的实际轨迹：**53 红 / 1 绿（桩实现）→ 54 绿（实�
 性质先于算法，测试才能"抄"性质而不是"抄"实现。
 
 > **复用动作**：其它模块动手前，先产出同构的性质文档。
-> - PlanComparer：对比维度在 [nx-plugin-design.md §2.2](./nx-plugin-design.md#L64-L79)
->   已有雏形（七维度 + 容差口径），升级成性质文档即可开工；
-> - PlanExecutor 需补写（重建顺序、参数映射、组树还原的性质）；
+> - PlanComparer：已按本模式落地（[plan-comparer.md](./plan-comparer.md) 性质文档 +
+>   48 用例，零基线/对称性/对齐保真等性质全部锁定）；
+> - PlanExecutor 已补写（重建顺序、参数映射、组树还原的性质）；
 > - FaceResolver 需定义（匹配正确率、容差边界、对称消歧）。
 
 ## 2. 六阶段流水线

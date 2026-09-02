@@ -25,7 +25,7 @@ namespace Autocam.PlanExecutor.Core.Tests
 
             var result = PlanExecutorPipeline.Build(plan, profile);
 
-            Assert.Equal(1, result.Commands.OfType<CreateOperationCommand>().Count());   // 只剩 DRILL_1
+            Assert.Single(result.Commands.OfType<CreateOperationCommand>());   // 只剩 DRILL_1
             Assert.Contains(result.Diagnostics, d => d.Level == "ERROR" && d.Code == "REFERENCE_DANGLING");
             Assert.Contains(result.Diagnostics, d => d.Level == "WARNING" && d.Code == "CAPABILITY_UNSUPPORTED");
             foreach (var d in result.Diagnostics)
