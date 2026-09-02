@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>Autocam.Nx.Adapter</RootNamespace>
+    <AssemblyName>Autocam.Nx.Adapter</AssemblyName>
+    <!-- 与 NX SDK（NXOpen for .NET，.NET Framework 4.8）平台一致 -->
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- 无 VS/.NET Framework targeting pack 的机器也能构建 net48 -->
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- NXOpen（本机 NX2406 SDK；随 NX 安装，仅在装有 NX 的机器上构建，决策 D-适配-6） -->
+    <Reference Include="NXOpen">
+      <HintPath>C:\Program Files\Siemens\NX2406\NXBIN\managed\NXOpen.dll</HintPath>
+    </Reference>
+    <Reference Include="NXOpen.UF">
+      <HintPath>C:\Program Files\Siemens\NX2406\NXBIN\managed\NXOpen.UF.dll</HintPath>
+    </Reference>
+    <Reference Include="NXOpen.Utilities">
+      <HintPath>C:\Program Files\Siemens\NX2406\NXBIN\managed\NXOpen.Utilities.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Autocam.Plan.Core\Autocam.Plan.Core.csproj" />
+    <ProjectReference Include="..\Autocam.PlanExporter.Core\Autocam.PlanExporter.Core.csproj" />
+    <ProjectReference Include="..\Autocam.PlanExecutor.Core\Autocam.PlanExecutor.Core.csproj" />
+    <ProjectReference Include="..\Autocam.PlanComparer.Core\Autocam.PlanComparer.Core.csproj" />
+  </ItemGroup>
+
+</Project>

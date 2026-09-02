@@ -19,7 +19,8 @@
 | `Autocam.PlanExporter.Core.Tests` | xUnit：12 套件 56 用例，零 NX 依赖 |
 | `Autocam.PlanExecutor.Core.Tests` | xUnit：8 套件 31 用例，零 NX 依赖（复用导出器夹具做 round-trip） |
 | `Autocam.PlanComparer.Core.Tests` | xUnit：13 套件 48 用例，零 NX 依赖（复用导出器夹具做零基线验证） |
-| （未建）NX 适配层 ×2 | 薄壳：NX API → `CamSetupSnapshot`（导出侧）；命令序列 → NX Builder 调用（执行侧）。需 NX SDK，后续在 NX 侧集成验证（对比侧无适配层——复用两侧导出） |
+| `Autocam.Nx.Adapter` | NX 适配层薄壳（`Autocam.Plugins.sln`，依赖本机 NXOpen SDK）：会话引导 / 导出快照读取器 / 命令执行器 / 参数路径表 + Journal 入口。M1/M3 批处理实测达标；M2 执行验证在 GUI 会话 |
+| `Autocam.Nx.Journals` | VB 装载器 journal：M0 探针系列（API 预研记录）+ M1_Export / M2_Rebuild / M3_Partial 验证入口（运行方式见 [nx-journal-manual-verification.md](../nx-journal-manual-verification.md)） |
 
 ## 隔离设计（对应两份性质文档）
 
@@ -78,9 +79,10 @@ schema 文件作为测试资产拷入输出目录——schema 变更直接触发
 
 ## 遗留（下一步）
 
-1. NX 适配层 ×2：导出侧（CAMSetup/Builder/几何 API → 快照，含生效值/能力/许可探测）、
-   执行侧（命令序列 → NXOpen 调用 + STEP 打开）
-2. NX 内最小闭环集成验证：手编工程 → 导出 → 同一工程内重建 → 对比（nx-plugin-design.md §4）
-3. 对比增强：刀路维度（schema 已预留 toolpath 通道，待适配层注入）、
+1. NX 适配层收尾（GUI 会话，见 [nx-journal-manual-verification.md](../nx-journal-manual-verification.md)）：
+   执行侧 M2 核对清单（组/工序 Create 在批处理下受对象模板注册表限制）；导出侧增强
+   （工序关联几何读取、能力探测、按 builder 类型参数子集表降噪）
+2. NX 内完整闭环 GUI 验证：导出 → 重建 → 再导出 → 跨件对比（nx-plugin-design.md §4）
+3. 对比增强：刀路维度（schema 已预留 toolpath 通道，Operation.GetToolpathTime/Length 已定位）、
    几何维度 FaceResolver 面集匹配升级（MVP 由 anchor_point 兜底）
 4. schema 增强字段（非切削细分/避让点/多轴驱动）按"可选增强"后补
