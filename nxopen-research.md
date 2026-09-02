@@ -2,7 +2,7 @@
 
 更新时间：2026-08-24\
 适用范围：Siemens NX 2406+ / NX X（API 以 NXOpen .NET 为准，C++/Python/Java 同名）\
-关联文档：[autocam-prd.md](../core/autocam-prd.md)、[capp-operation-mapping-table.md](../core/capp-operation-mapping-table.md)、[autocam-plan.schema.json](../schema/autocam-plan.schema.json)
+关联文档：[autocam-prd.md](../core/autocam-prd.md)、[capp-operation-mapping-table.md](../core/capp-operation-mapping-table.md)、[autocam-plan.schema.json](./schema/autocam-plan.schema.json)
 
 ---
 
