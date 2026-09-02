@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>Autocam.PlanComparer.Core</RootNamespace>
+    <AssemblyName>Autocam.PlanComparer.Core</AssemblyName>
+    <!-- 与 NX SDK（NXOpen for .NET，.NET Framework 4.8）平台一致 -->
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- 无 VS/.NET Framework targeting pack 的机器也能构建 net48 -->
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <!-- 报告合同 schema 校验（draft-07），MIT 许可 -->
+    <PackageReference Include="NJsonSchema" Version="11.1.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- 共享合同层：plan 模型 / 能力画像 / 诊断 / 序列化设置（决策点 D1） -->
+    <ProjectReference Include="..\Autocam.Plan.Core\Autocam.Plan.Core.csproj" />
+  </ItemGroup>
+
+</Project>
