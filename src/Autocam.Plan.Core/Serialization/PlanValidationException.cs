@@ -1,6 +1,6 @@
 using System;
 
-namespace Autocam.PlanExporter.Core.Serialization
+namespace Autocam.Plan.Core.Serialization
 {
     /// <summary>
     /// plan.json 未通过 schema v3 校验（PlanDeserializer 整体拒绝的异常，

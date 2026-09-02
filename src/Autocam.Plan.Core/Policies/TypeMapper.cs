@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Autocam.PlanExporter.Core.Export
+namespace Autocam.Plan.Core.Policies
 {
     /// <summary>
     /// §4.4：NX typeName/subtypeName → plan operation_type 枚举 + 加工域。

@@ -1,8 +1,8 @@
 using System.Linq;
-using Autocam.PlanExporter.Core.Plan;
+using Autocam.Plan.Core.Plan;
 using Newtonsoft.Json;
 
-namespace Autocam.PlanExporter.Core.Serialization
+namespace Autocam.Plan.Core.Serialization
 {
     /// <summary>
     /// PlanParser（轻量版）：plan.json → PlanRoot。

@@ -12,11 +12,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!--
-      共享 plan 模型/诊断/能力画像/映射表：PlanExporter.Core 目前承载共享合同层。
-      第三个消费者（PlanComparer）出现时按 rule of three 抽取公共项目。
-    -->
-    <ProjectReference Include="..\Autocam.PlanExporter.Core\Autocam.PlanExporter.Core.csproj" />
+    <!-- 共享合同层（plan 模型/诊断/能力画像/映射表）已抽取至 Plan.Core（rule of three，决策点 D1） -->
+    <ProjectReference Include="..\Autocam.Plan.Core\Autocam.Plan.Core.csproj" />
   </ItemGroup>
 
 </Project>

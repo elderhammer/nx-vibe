@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace Autocam.PlanExporter.Core.Plan
+namespace Autocam.Plan.Core.Plan
 {
     /// <summary>
     /// plan 输出对象图，字段与 schema/autocam-plan.schema.json 一一对应

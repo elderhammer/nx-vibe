@@ -11,6 +11,12 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Autocam.PlanExecutor.Core",
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Autocam.PlanExecutor.Core.Tests", "Autocam.PlanExecutor.Core.Tests\Autocam.PlanExecutor.Core.Tests.csproj", "{974A2255-C107-4C57-A556-BA78A9B73DCA}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Autocam.Plan.Core", "Autocam.Plan.Core\Autocam.Plan.Core.csproj", "{AE853964-62C1-443A-82CA-32256CC7D36E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Autocam.PlanComparer.Core", "Autocam.PlanComparer.Core\Autocam.PlanComparer.Core.csproj", "{40BD30AA-4E77-45E1-BF4A-9F48E0A39936}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Autocam.PlanComparer.Core.Tests", "Autocam.PlanComparer.Core.Tests\Autocam.PlanComparer.Core.Tests.csproj", "{957FAB79-3590-460B-BA8F-FB7B03C6B902}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -36,5 +42,17 @@ Global
 		{974A2255-C107-4C57-A556-BA78A9B73DCA}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{974A2255-C107-4C57-A556-BA78A9B73DCA}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{974A2255-C107-4C57-A556-BA78A9B73DCA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AE853964-62C1-443A-82CA-32256CC7D36E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AE853964-62C1-443A-82CA-32256CC7D36E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AE853964-62C1-443A-82CA-32256CC7D36E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AE853964-62C1-443A-82CA-32256CC7D36E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{40BD30AA-4E77-45E1-BF4A-9F48E0A39936}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{40BD30AA-4E77-45E1-BF4A-9F48E0A39936}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{40BD30AA-4E77-45E1-BF4A-9F48E0A39936}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{40BD30AA-4E77-45E1-BF4A-9F48E0A39936}.Release|Any CPU.Build.0 = Release|Any CPU
+		{957FAB79-3590-460B-BA8F-FB7B03C6B902}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{957FAB79-3590-460B-BA8F-FB7B03C6B902}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{957FAB79-3590-460B-BA8F-FB7B03C6B902}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{957FAB79-3590-460B-BA8F-FB7B03C6B902}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

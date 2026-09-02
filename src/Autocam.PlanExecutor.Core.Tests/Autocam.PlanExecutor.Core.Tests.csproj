@@ -17,6 +17,7 @@
     <ProjectReference Include="..\Autocam.PlanExecutor.Core\Autocam.PlanExecutor.Core.csproj" />
     <!-- 复用导出器测试的夹具（PlanFixtures/SchemaAsset）：同一批夹具既喂导出又喂重建，是 round-trip 测试的前提 -->
     <ProjectReference Include="..\Autocam.PlanExporter.Core.Tests\Autocam.PlanExporter.Core.Tests.csproj" />
+    <ProjectReference Include="..\Autocam.Plan.Core\Autocam.Plan.Core.csproj" />
   </ItemGroup>
 
 </Project>

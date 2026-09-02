@@ -1,10 +1,10 @@
 using System.Collections.Generic;
 using System.Linq;
-using Autocam.PlanExporter.Core.Plan;
+using Autocam.Plan.Core.Plan;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 
-namespace Autocam.PlanExporter.Core.Serialization
+namespace Autocam.Plan.Core.Serialization
 {
     /// <summary>
     /// plan 对象图 → JSON。

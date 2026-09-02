@@ -1,5 +1,5 @@
 using System.Linq;
-using Autocam.PlanExporter.Core.Dto;
+using Autocam.Plan.Core.Dto;
 
 namespace Autocam.PlanExporter.Core.Export
 {

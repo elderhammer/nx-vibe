@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace Autocam.PlanExporter.Core.Dto
+namespace Autocam.Plan.Core.Dto
 {
     /// <summary>
     /// 当前 NX 会话的能力画像（适配层探测产物）：

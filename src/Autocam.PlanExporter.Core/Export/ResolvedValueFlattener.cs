@@ -1,7 +1,8 @@
 using System.Collections.Generic;
 using System.Linq;
-using Autocam.PlanExporter.Core.Dto;
-using Autocam.PlanExporter.Core.Policies;
+using Autocam.Plan.Core.Dto;
+using Autocam.Plan.Core.Policies;
+using Autocam.Plan.Core.Diagnostics;
 
 namespace Autocam.PlanExporter.Core.Export
 {

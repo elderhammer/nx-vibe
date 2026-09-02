@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using Autocam.PlanExporter.Core.Serialization;
+using Autocam.Plan.Core.Serialization;
 using NJsonSchema.Validation;
 
 namespace Autocam.PlanExporter.Core.Tests.TestDoubles

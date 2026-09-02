@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace Autocam.PlanExporter.Core.Policies
+namespace Autocam.Plan.Core.Policies
 {
     public enum ParamCategory
     {

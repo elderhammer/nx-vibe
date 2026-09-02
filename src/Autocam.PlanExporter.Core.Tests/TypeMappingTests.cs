@@ -1,4 +1,4 @@
-using Autocam.PlanExporter.Core.Export;
+using Autocam.Plan.Core.Policies;
 using Xunit;
 
 namespace Autocam.PlanExporter.Core.Tests

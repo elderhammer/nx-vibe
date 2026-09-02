@@ -1,6 +1,4 @@
-using Autocam.PlanExporter.Core.Export;
-
-namespace Autocam.PlanExecutor.Core.Policies
+namespace Autocam.Plan.Core.Policies
 {
     /// <summary>
     /// 方法组约定命名（plan-executor.md §4.2，决策点 a：plan 不含方法组结构，

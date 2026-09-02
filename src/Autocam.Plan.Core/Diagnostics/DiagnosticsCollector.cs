@@ -1,7 +1,7 @@
 using System.Collections.Generic;
-using Autocam.PlanExporter.Core.Plan;
+using Autocam.Plan.Core.Plan;
 
-namespace Autocam.PlanExporter.Core.Export
+namespace Autocam.Plan.Core.Diagnostics
 {
     /// <summary>
     /// 诊断唯一汇聚点：所有阶段的缺项/异常/碰撞都必须经此落 diagnostics[]，

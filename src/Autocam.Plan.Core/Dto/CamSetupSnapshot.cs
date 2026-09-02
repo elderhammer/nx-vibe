@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace Autocam.PlanExporter.Core.Dto
+namespace Autocam.Plan.Core.Dto
 {
     /// <summary>
     /// 操作级参数的读取结果：显式设置，或继承态（未在操作上设置）。

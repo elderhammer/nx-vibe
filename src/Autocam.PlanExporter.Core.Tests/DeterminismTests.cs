@@ -1,5 +1,5 @@
 using System.Linq;
-using Autocam.PlanExporter.Core.Serialization;
+using Autocam.Plan.Core.Serialization;
 using Autocam.PlanExporter.Core.Tests.TestDoubles;
 using Xunit;
 

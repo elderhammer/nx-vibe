@@ -1,6 +1,6 @@
 using System.Collections.Generic;
-using Autocam.PlanExporter.Core.Dto;
-using Autocam.PlanExporter.Core.Plan;
+using Autocam.Plan.Core.Dto;
+using Autocam.Plan.Core.Plan;
 
 namespace Autocam.PlanExecutor.Core.Build
 {

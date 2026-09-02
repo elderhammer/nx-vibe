@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 using NJsonSchema;
 using NJsonSchema.Validation;
 
-namespace Autocam.PlanExporter.Core.Serialization
+namespace Autocam.Plan.Core.Serialization
 {
     /// <summary>
     /// 后置条件 1 的执行者：plan.json 必须通过 autocam-plan.schema.json v3 校验。

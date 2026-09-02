@@ -1,5 +1,5 @@
 using System.Collections.Generic;
-using Autocam.PlanExporter.Core.Plan;
+using Autocam.Plan.Core.Plan;
 using Autocam.PlanExporter.Core.Tests.TestDoubles;
 
 namespace Autocam.PlanExecutor.Core.Tests.TestDoubles

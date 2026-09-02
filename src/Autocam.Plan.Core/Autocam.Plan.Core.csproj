@@ -3,19 +3,17 @@
   <PropertyGroup>
     <TargetFramework>net48</TargetFramework>
     <LangVersion>latest</LangVersion>
-    <RootNamespace>Autocam.PlanExporter.Core</RootNamespace>
-    <AssemblyName>Autocam.PlanExporter.Core</AssemblyName>
+    <RootNamespace>Autocam.Plan.Core</RootNamespace>
+    <AssemblyName>Autocam.Plan.Core</AssemblyName>
     <!-- 与 NX SDK（NXOpen for .NET，.NET Framework 4.8）平台一致 -->
   </PropertyGroup>
 
   <ItemGroup>
     <!-- 无 VS/.NET Framework targeting pack 的机器也能构建 net48 -->
     <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <!-- 共享合同层（plan 模型/快照 DTO/能力画像/策略表/序列化）已抽取至 Plan.Core（rule of three，决策点 D1） -->
-    <ProjectReference Include="..\Autocam.Plan.Core\Autocam.Plan.Core.csproj" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <!-- schema 校验（draft-07），MIT 许可；Newtonsoft.Json.Schema 为商业许可，避免引入 -->
+    <PackageReference Include="NJsonSchema" Version="11.1.0" />
   </ItemGroup>
 
 </Project>
