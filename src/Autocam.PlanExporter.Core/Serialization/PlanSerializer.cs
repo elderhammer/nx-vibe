@@ -17,13 +17,18 @@ namespace Autocam.PlanExporter.Core.Serialization
     {
         public static string Serialize(PlanRoot plan)
         {
-            var settings = new JsonSerializerSettings
+            return JsonConvert.SerializeObject(plan, CreateSettings());
+        }
+
+        /// <summary>序列化/反序列化共用设置（PlanDeserializer 与 Serialize 必须使用同一命名策略才能互逆）。</summary>
+        public static JsonSerializerSettings CreateSettings()
+        {
+            return new JsonSerializerSettings
             {
                 ContractResolver = new OrderedSnakeCaseContractResolver(),
                 NullValueHandling = NullValueHandling.Ignore,
                 Formatting = Formatting.Indented,
             };
-            return JsonConvert.SerializeObject(plan, settings);
         }
 
         private sealed class OrderedSnakeCaseContractResolver : DefaultContractResolver

@@ -7,6 +7,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Autocam.PlanExporter.Core",
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Autocam.PlanExporter.Core.Tests", "Autocam.PlanExporter.Core.Tests\Autocam.PlanExporter.Core.Tests.csproj", "{66FE8EA1-5EDF-4BF4-BD35-9B1ECD881444}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Autocam.PlanExecutor.Core", "Autocam.PlanExecutor.Core\Autocam.PlanExecutor.Core.csproj", "{C1C335F2-97CF-4D98-A555-96834E85958D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Autocam.PlanExecutor.Core.Tests", "Autocam.PlanExecutor.Core.Tests\Autocam.PlanExecutor.Core.Tests.csproj", "{974A2255-C107-4C57-A556-BA78A9B73DCA}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -24,5 +28,13 @@ Global
 		{66FE8EA1-5EDF-4BF4-BD35-9B1ECD881444}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{66FE8EA1-5EDF-4BF4-BD35-9B1ECD881444}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{66FE8EA1-5EDF-4BF4-BD35-9B1ECD881444}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C1C335F2-97CF-4D98-A555-96834E85958D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C1C335F2-97CF-4D98-A555-96834E85958D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C1C335F2-97CF-4D98-A555-96834E85958D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C1C335F2-97CF-4D98-A555-96834E85958D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{974A2255-C107-4C57-A556-BA78A9B73DCA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{974A2255-C107-4C57-A556-BA78A9B73DCA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{974A2255-C107-4C57-A556-BA78A9B73DCA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{974A2255-C107-4C57-A556-BA78A9B73DCA}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

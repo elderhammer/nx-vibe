@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>Autocam.PlanExecutor.Core</RootNamespace>
+    <AssemblyName>Autocam.PlanExecutor.Core</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!--
+      共享 plan 模型/诊断/能力画像/映射表：PlanExporter.Core 目前承载共享合同层。
+      第三个消费者（PlanComparer）出现时按 rule of three 抽取公共项目。
+    -->
+    <ProjectReference Include="..\Autocam.PlanExporter.Core\Autocam.PlanExporter.Core.csproj" />
+  </ItemGroup>
+
+</Project>
