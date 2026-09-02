@@ -94,6 +94,65 @@ namespace Autocam.PlanExporter.Core.Export
             return true;
         }
 
+        /// <summary>
+        /// 反向映射（PlanExecutor 用）：operation_type → (typeName, domain)。
+        /// 每个 operation_type 取 §4.2 全表的规范 typeName（显式列表，如 bore→BORING、
+        /// probe→ON_MACHINE_PROBING）；"other" 不在反向表中（由执行器走 nx_template 直落，
+        /// plan-executor.md §4.3）。返回 false = 未知 operation_type（调用侧按前置条件 5 处置）。
+        /// </summary>
+        private static readonly Dictionary<string, Tuple<string, string>> ReverseTable =
+            new Dictionary<string, Tuple<string, string>>(StringComparer.Ordinal)
+            {
+                { "mill_cavity", T("CAVITY_MILL", Domains.Milling) },
+                { "mill_planar", T("PLANAR_MILL", Domains.Milling) },
+                { "mill_face", T("FACE_MILLING", Domains.Milling) },
+                { "mill_plunge", T("PLUNGE_MILL", Domains.Milling) },
+                { "mill_groove", T("GROOVE_MILL", Domains.Milling) },
+                { "mill_zlevel", T("ZLEVEL_PROFILE", Domains.Milling) },
+                { "mill_surface", T("SURFACE_CONTOUR", Domains.Milling) },
+                { "mill_flowcut", T("FLOWCUT", Domains.Milling) },
+                { "mill_chamfer", T("CHAMFER_MILL", Domains.Milling) },
+                { "mill_engrave", T("ENGRAVE", Domains.Milling) },
+                { "mill_cylinder", T("CYLINDER_MILL", Domains.Milling) },
+                { "drill_center", T("SPOT_DRILLING", Domains.Drilling) },
+                { "drill", T("DRILL", Domains.Drilling) },
+                { "drill_peck", T("PECK_DRILLING", Domains.Drilling) },
+                { "drill_break_chip", T("BREAK_CHIP_DRILLING", Domains.Drilling) },
+                { "tap", T("TAPPING", Domains.Drilling) },
+                { "thread_mill", T("THREAD_MILLING", Domains.Drilling) },
+                { "ream", T("REAMING", Domains.Drilling) },
+                { "bore", T("BORING", Domains.Drilling) },
+                { "counterbore", T("COUNTERBORE", Domains.Drilling) },
+                { "countersink", T("COUNTERSINK", Domains.Drilling) },
+                { "turn_rough", T("ROUGH_TURNING", Domains.Turning) },
+                { "turn_finish", T("FINISH_TURNING", Domains.Turning) },
+                { "turn_thread", T("THREAD_TURNING", Domains.Turning) },
+                { "turn_drill", T("CENTERLINE_DRILL_TURNING", Domains.Turning) },
+                { "turn_mill", T("MULTI_AXIS_TURN_MILL", Domains.Turning) },
+                { "multi_axis_rough", T("MULTI_AXIS_ROUGHING", Domains.MultiAxis) },
+                { "multi_axis_wall_finish", T("MULTI_AXIS_WALL_FINISHING", Domains.MultiAxis) },
+                { "multi_axis_deburr", T("MULTI_AXIS_DEBURRING", Domains.MultiAxis) },
+                { "wedm", T("WEDM_OPERATION", Domains.Wedm) },
+                { "additive_planar", T("PLANAR_ADDITIVE_DEPOSIT", Domains.Additive) },
+                { "additive_rotary", T("ROTARY_ADDITIVE_DEPOSIT", Domains.Additive) },
+                { "probe", T("ON_MACHINE_PROBING", Domains.Probing) },
+                { "machine_control", T("MILL_MACHINE_CONTROL", Domains.MachineControl) },
+                { "user_defined", T("MILL_USER_DEFINED", Domains.UserDefined) },
+            };
+
+        public static bool TryMapOperationType(string operationType, out string typeName, out string domain)
+        {
+            if (ReverseTable.TryGetValue(operationType, out var mapped))
+            {
+                typeName = mapped.Item1;
+                domain = mapped.Item2;
+                return true;
+            }
+            typeName = null;
+            domain = null;
+            return false;
+        }
+
         private static Tuple<string, string> T(string operationType, string domain)
         {
             return Tuple.Create(operationType, domain);
