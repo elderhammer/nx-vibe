@@ -1,6 +1,6 @@
 # NX 插件设计 (v3) — Plan 双向验证闭环
 
-> 更新时间：2026-09-03（终态回写：M0-M3 实测达标、闭环真实偏差归零；实施状态见 §2/§4/§7，验证明细见 [nx-adapter.md](./nx-adapter.md) §6-7）
+> 更新时间：2026-09-03（终态回写：M0-M4c 实测达标、闭环真实偏差归零 + STEP 跨件同款复现；实施状态见 §2/§4/§7，验证明细见 [nx-adapter.md](./nx-adapter.md) §6-7）
 > 定位转变：**初始版本不再直接消费云端 CAPP 计划**，而是以**工程师手编的 NX 工程
 > 为 ground truth**，跑通「导出 plan.json → 按 plan 自动重建工程 → 对比偏差」三步闭环。
 > 该闭环既验证 plan.json 合同是否无歧义，也为后续 CAPP 自动生成的工序提供校准基准。
@@ -19,7 +19,8 @@
                       回读各 Builder 实际生效参数
                       序列化 plan.json（工程师工艺意图的数字化存档）
 
-② 导入重建 (Reimport)                          ✅ 同工程副本口径（D-适配-3，M2-M3）；⏳ STEP 口径 → M4
+② 导入重建 (Reimport)                          ✅ STEP 口径（M4c 2026-09-03 跨件闭环：OpenDisplay 直开
+                                                   翻译件重建，归零与副本口径逐字段一致，D-适配-3 解除）
    打开原始 STEP 文件
       └─ 加载步骤①的 plan.json
       └─ PlanExecutor：建 CAMSetup → 建四组 → 逐 workingstep 创建工序
@@ -89,11 +90,11 @@
 - 云端 `/api/v1/tests/nx-project/render`（渲染 NX Journal）继续保留，
   作为步骤②「plan → 自动建工序」的**零部署替代**，配合
   [nx-journal-manual-verification.md](./nx-journal-manual-verification.md) 手动核对。
-- 插件侧最小闭环已达标（M0-M3，2026-09-03）：手编工程 → 导出（M1）→ 同工程副本重建（M2）
-  → 对比（M3），真实偏差归零、7 条写保护 known_skip（INFO，结构化豁免）。**剩余闭环缺口 =
-  几何维度三方为空**（导出侧不读工序关联几何 / 重建侧不关联（D-适配-2）/ 对比 0/0），连同
-  **STEP 打开与跨件对比（D-适配-3 解除）归入 M4**——二者一体：跨件比较才需要 FaceResolver
-  属性匹配，也是 CAPP 消费方向的前置。
+- 插件侧最小闭环已达标（M0-M4c，2026-09-03）：手编工程 → 导出（M1）→ 重建（M2）→ 对比（M3），
+  真实偏差归零、7 条写保护 known_skip（INFO，结构化豁免）；**M4c STEP 跨件闭环同款归零**（STEP
+  直开翻译件载体重建，报告与副本口径逐字段一致，D-适配-3 解除）。**闭环缺口收敛**：几何维度按
+  2026-09-03 定案在本域（2.5D mill_planar）known-skip 收口（NX API 边界实证），工序级面合同与
+  FaceResolver 归 3D 显式面选择域后置——剩余可做项为 §7-4 发布形态与 3D 域扩张，均非初始版本阻塞。
 
 ## 5. 平面化字段清单（MVP 所需）
 
@@ -128,11 +129,12 @@ diagnostics[]   (info/warning/error)
 2. **PlanExecutor 重建**：plan → prj′ — ✅ M2（D-适配-3：同工程副本载体；STEP 口径移入 5）
 3. **PlanComparer**：prj′ vs prj 偏差表 + 汇总评分 — ✅ M3（真实偏差归零）
 4. 并入 `Autocam.Plugins.sln` 发布 — ⏳ 后置（Core 三件 + 适配层已在 Plugins.sln 内；INXAddIn 宿主、发布形态未做）
-5. **M4（下一步）**：STEP 打开 + 跨件几何闭环——导出侧工序关联几何读取（补快照职责 #6，
-   见 nx-adapter.md §2.1）→ FaceResolver 面匹配（Core，测试先行）→ 重建侧几何关联（解除
-   D-适配-2）+ STEP 打开（解除 D-适配-3）→ 跨件闭环对比（geometry 维度实读数；对称歧义
-   标 diagnostic，见 §6）
-   — **2026-09-03 定案**：探针全链实证（核对清单 M4 节）：NX2406 mill_planar 域工序/组几何为
-   CAM 内部模型，裸 Tag 面/体不物化 → 工序级 geometry_ref 合同在本域 **known-skip 收口**
-   （3D 显式面选择域 + FaceResolver 后置，与 §6 2.5D 边界声明一致）；余项为 **M4c STEP
-   跨件闭环**（结构/刀具/参数/策略/MCS 维度，与工序几何无关）
+5. **M4 几何维度 + M4c STEP 跨件** — **2026-09-03 全量收口**：
+   - M4 几何维度**定案 known-skip**：探针全链实证（核对清单 M4 节）：NX2406 mill_planar 域工序/组
+     几何为 CAM 内部模型，裸 Tag 面/体不物化 → 工序级 geometry_ref 合同在本域 **known-skip 收口**
+     （3D 显式面选择域 + FaceResolver 后置，与 §6 2.5D 边界声明一致）。
+   - **M4c STEP 跨件闭环 ✅**（核对清单 M4c 节，GUI 实测）：S0 探针定案打开路径 = OpenDisplay
+     直开隐式翻译（DexManager StepImporter 在此环境 Commit 静默返 null → known-issue 收口）+ 载体
+     挂 mill_planar（S1 fixture 自动导出 CreateStepCreator/AP214 可用）；S2 主闭环与 M3 副本口径
+     报告**逐字段一致**（structure 15/15、tool 65/65、parameter 98/98、strategy 55+7 known_skip、
+     mcs 1/1、deviations 7 同款豁免）→ **D-适配-3 解除**，plan 合同跨文件载体无歧义重建实证。

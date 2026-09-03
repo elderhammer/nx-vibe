@@ -135,7 +135,52 @@
 > 边界，INFO 结构化豁免）** 收口，工序级面合同验证归 3D 域（mill_contour 等显式面选择域 +
 > FaceResolver）后置（与 nx-plugin-design §6 2.5D 边界声明一致）。Core 侧 faces→features
 > anchor 管线已由合成快照实证（features 含 anchor=3、schema 0 错）——合同与拍平逻辑无缺陷。
-> M4 余项：M4c STEP 跨件闭环（结构/刀具/参数/策略/MCS 维度，与工序几何无关）继续。
+> M4 余项：M4c STEP 跨件闭环（结构/刀具/参数/策略/MCS 维度，与工序几何无关）→ **✅ 2026-09-03 完成**
+> （见下 M4c 节：S0 探针定案 + S2 主闭环归零复现，D-适配-3 解除）。
+
+## M4c：STEP 跨件闭环（S0 双态实证 ✅ + S2 主闭环归零复现 ✅ 2026-09-03）
+
+> M4c = STEP 打开（解除 D-适配-3 的副本口径）+ 跨件闭环（结构/刀具/参数/策略/MCS 维度，
+> 与工序几何无关——几何 known-skip 定案见上 M4 节）。探针链：`M4c_StepProbe.vb`
+> （vbc → exe / run_journal 直跑 .vb 均可——Q4 判读即两态对照）→ `JournalEntry.M4cStepProbe`
+> → `NxStepOpenProbe`（Export/NxStepOpenProbe.cs）。输出 `C:\nx-vibe-journal-out\m4c_stepopen.txt`。
+
+**静态实证（m4c_reflect1-4.ps1，无 NX 会话即答，产物留档 C:\nx-vibe-journal-out\m4c_reflect*_out.txt）**：
+- Session 无 Step/Import/Export 成员；`StepImportBuilder` / `StepExportBuilder` /
+  `Features.ImportFeatureBuilder` 不存在；PartCollection 仅 Open*/OpenBase 系（无 STEP 专用直开入口）；
+- **STEP 翻译器 = `Session.DexManager.CreateStep203/214/242Importer()`**（Builder 语义：
+  InputFile / ImportTo[WorkPart|NewPart] / FileOpenFlag / SewSurfaces / Optimize… + Commit/Destroy）——
+  Q1 的代码面已答，运行时只验 Commit 成败与产物形态（批处理/GUI 差异）。
+
+| # | 探针问题 | S0 双态实证结论（2026-09-03，批处理 run_journal + GUI File→Execute 各一轮） |
+| :--- | :--- | :--- |
+| 1 | Q1 STEP 打开路径 | **OpenDisplay 直开成功（双态同构）**：隐式翻译生效 → leaf=m4_gt_face_stp、bodies=1 → **M4c 打开路径定案 = 直开，无翻译器仪式**。DexManager 203/214/242（NewPart，SetMode=NativeFileSystem 后）Commit 返 null 静默失败——双态复现、与显示态无关 → known-issue 收口（后续需要 schema 强控/merge 导入时另开专项） |
+| 2 | Q2 产物挂 CAMSetup | **路径A ok（双态）**：直开产物挂 mill_planar 成功 → **M4c 重建载体定案 = OpenDisplay 直开 + CreateCamSetup**（D-适配-3 副本口径解除路径）。注意：无 CAM 零件读 `.CAMSetup` 属性即抛（非返 null），判读时勿误读。路径B（WorkPart 导入已挂 CAM 宿主件）报 "Part Import Error: Unable to import selected file to work part" → 弃 |
+| 3 | Q3 落位 | STEP 翻译件 WCS [0,0,0] = 对照件原点、bodies=1 几何完整 → **无坐标漂移**（MCS 对比基准风险排除） |
+| 4 | Q4 模式差异 | **双态同构**：Q1-①/Q2 两态结果一致；唯一差异 = GUI 错误消息本地化中文（判读无碍）→ M4c 后续验证两态皆可跑，批处理优先 |
+
+> 运行方式：退出全部 NX → `dotnet build` 适配层 → vbc 编译（compile_m4c_step_probe.bat）→
+> 批处理：`UGII_BATCH_MODE=1 "…\NXBIN\run_journal.exe" M4c_StepProbe.vb`；
+> GUI：NX 进入加工环境 → File → Execute → NX Open 选 M4c_StepProbe.exe → 回传 `m4c_stepopen.txt` 判读。
+
+> **S1（fixture，已完成 2026-09-03）**：STEP 主题件 = `parts\m4_gt_face.stp`（AP214 实落盘，8KB，
+> ST-Developer/NX2406.1700）。fixture 缺失时探针自动从对照件导出（`CreateStepCreator` 批处理可用，
+> **输出文件名 = 零件名**、OutputFile 仅定目录）；自动导出失败才需 GUI 手动兜底（导出名即零件名）。
+> 旁证：空体件（m1_template_metric.prt bodies=0）自动导出**静默无产物** → 空体 STEP 路线出局；
+> H15005-307(1).prt 批处理不可开（No Displayed Part，M4 先例一致）→ GUI-only 件，未选用。
+
+> **S2（主闭环，✅ 2026-09-03 GUI 实测归零复现）**：`M4c_Loop.vb` → `JournalEntry.M4cLoop`——与 M3Loop
+> 同构，**唯一差异 = 重建载体从另存副本换成 STEP 直开翻译件**（源 m1_template_metric.prt 现导 ground
+> truth plan → 载体 parts\m4_gt_face.stp OpenDisplay 直开 + CreateCamSetup → 重建 28/28 → 现导 plan″
+> → Compare）。**实测报告与 M3 副本口径逐字段一致**：structure 15/15（0 类型错/0 乱序/0 组差）、
+> tool 65/65、parameter 98/98、strategy 55 匹配 + 7 known_skip、mcs 1/1、geometry 0 对比（known-skip
+> 口径）、deviations 7 = 与 M3 同款豁免（mill_face/mill_chamfer 的 floor_stock/part_stock/depth_per_cut
+> 写保护表豁免，plan-comparer §3.8）→ **载体依赖偏差 = 0，plan 合同跨文件载体无歧义重建实证，
+> D-适配-3 解除**。归档：`C:\nx-vibe-journal-out\m4c_vs_m3.txt`（双报告逐字段对照）。
+> ground truth 选型依据：m1 件工序类型全在重建键表（M3 归零实证）；m4_gt_face.stp 载体几何/落位
+> S0 已证；m4_gt_face.prt 与空体件/H15005 件不可用原因见 S1 段旁证。
+> 运行方式：GUI 会话（op 模板注册表仅 GUI 加载）→ File → Execute → NX Open 选 M4c_Loop.exe；
+> 批处理不可跑（Create 必失败），无需尝试。
 
 ## 通用注意事项
 
