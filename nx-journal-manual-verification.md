@@ -89,6 +89,99 @@
 > → 12（组名复用 + 写保护跳过）→ 7（豁免口径统一 + 两侧都有值豁免）→ **0 真实偏差**
 > （FormMill 读取补全 + MILL 类型落地）。全程无 Core 缺陷，全部为适配层保真度缺口。
 
+## M4：几何闭环（子步0 探针 v1-v4 实证 2026-09-03，GUI 运行待执行）
+
+> M4 = 解除 D-适配-2/3 镜像（几何维度三方从空转 0/0 到实读）+ STEP 跨件（nx-plugin-design §7-5）。
+> 探针链：`M4_GeoProbe.vb`（vbc → exe）→ `JournalEntry.M4GeoProbe` → `NxGeometryProbe`
+> （Export/NxGeometryProbe.cs）。输出 `C:\nx-vibe-journal-out\m4_geoprobe.txt`。
+
+**v1-v3 批处理实证结论（m1_template_metric.prt）**：
+- 读链离线定位成立：builder 几何角色 → `.GeometryList → GetContents → GeometrySet.GetItems`；
+  另有 GeometryCiBuilder 通用角色（全部 Builder 都有）与 Boundary/BoundaryPlanarMill 角色（平面族）。
+- **批处理加载态下所有几何容器为空**：CAM.Geometry 五角色（Blank/Wall/Check/CutArea/Part）各
+  set=1 但 items=0（`InitializeData(true)` 重载后仍 0）；BoundarySetList→list[1] 但
+  BoundaryMemberSetList→list[0]；组级仅 Orient 型（NONE/MCS/MCS_MAIN，无 WORKPIECE）。
+- 模板件工序为自动/特征驱动（AutoWallSelection=true；op 带 InsertFeature/RemoveFeature），
+  且几何物化呈会话耦合（与 M0 模板注册表同源的三态差异）——**几何读取须 GUI 显示态验证**。
+- 确定性 ✓（两遍指纹一致）；H15005 批处理 OpenDisplay/Parts.Open 均返 null（文件级加载失败，GUI 待验）。
+- P3 离线已证：.NET UF **无** ask_face_area/ask_face_normals（nxopen-research §2.3 过时），
+  只有 AskFaceData（类型码/面内点/方向/盒）+ AskFaceProps（(u,v) 处单位法向）；托管无 Measure* 创建入口。
+
+| # | 探针问题 | GUI 判读指引 |
+| :--- | :--- | :--- |
+| 1 | P1 各 op 的 Builder 上哪些几何角色承载关联几何 | `role: sets=N items=M`（角色名频次表 = M4a 映射表输入）；期望显示态下面铣/平面类 op 至少一角色有 items |
+| 2 | P2 载荷形态（Face/Edge/BoundaryMember/其他） | 元素类型名决定 M4a 分类口径；若 GUI 下仍全空 → 模板件工序确无显式存储几何，M4 需显式面选择 ground truth（用户 GUI 手编小件） |
+| 3 | P3 面属性 API | AskFaceData/AskFaceProps 在真实面上是否可读；面积/质心路线（两成员无命中 → 边界环积分或测量 API 次轮探针） |
+| 4 | P4 两遍枚举指纹一致 | 确定性硬验收（导出侧字节级一致的前提） |
+
+> 运行方式（GUI 会话，同 M2/M3）：退出全部 NX → `dotnet build` 适配层 → vbc 编译
+> `M4_GeoProbe.vb` → `C:\nx-vibe-journal-out\M4_GeoProbe.exe`（编译命令见该文件头注 / compile_m4_probe.bat）→
+> NX GUI 打开加工环境 → File → Execute → NX Open 选 M4_GeoProbe.exe →
+> 回传 `m4_geoprobe.txt` 判读（loader 会自行打开/定位 m1_template_metric.prt + H15005-307(1).prt）。
+
+> **2026-09-03 GUI 实测补充（写探针 v1-v5 全链实证）**：几何容器在 GUI 与批处理一致全空；
+> H15005 GUI 亦不可用。程序化自建 ground truth（`M4_WProbe.vb` → `JournalEntry.M4GeoWriteProbe`
+> → `NxGeoWriterProbe`）逐轮实证：方块体/刀具组/工序（POCKETING 系，VolumeBased25D 五角色）
+> 创建全部可行（Create 传 subtype=null 会原生 AV——键表 key 是 plan 类型非模板名）；
+> 但几何写/读全部落空：`AppendGeometrySet` 原生 AV（模板集语义不明）；`CreateGeometrySet +
+> Selection.Add(单参)` 调用成功 + InitializeData(true) + Commit 后回读仍 sets=1 items=0
+> （工序级五角色 + 组级 WORKPIECE 的 PartGeometry/CheckGeometry 全部如此——Add 不向
+> CAM 数据库物化）；几何树实证结构 `GEOMETRY→MCS_MAIN→WORKPIECE→MCS_LOCAL`；
+> MillGeomBuilder 属性面揭示 BlankGeometry:GeometryGroup / GeometryCiBuilder / LayoutCiBuilder
+> 等内部模型。**收敛结论（M4 几何维度定案）**：NX2406 的 2.5D 域（mill_planar 族）工序/组几何
+> 为 CAM 内部模型（特征/Ci/ScCollector/拓扑驱动），裸 Tag 面/体不向 `CAM.Geometry.GetItems`
+> 物化——工序级与组级、模板态与挂接态、批处理与 GUI 全一致。plan 的工序级
+> `geometry_ref`（face anchor）合同在 2.5D NX 侧无落点 → 该维度按 **known-skip（NX API
+> 边界，INFO 结构化豁免）** 收口，工序级面合同验证归 3D 域（mill_contour 等显式面选择域 +
+> FaceResolver）后置（与 nx-plugin-design §6 2.5D 边界声明一致）。Core 侧 faces→features
+> anchor 管线已由合成快照实证（features 含 anchor=3、schema 0 错）——合同与拍平逻辑无缺陷。
+> M4 余项：M4c STEP 跨件闭环（结构/刀具/参数/策略/MCS 维度，与工序几何无关）→ **✅ 2026-09-03 完成**
+> （见下 M4c 节：S0 探针定案 + S2 主闭环归零复现，D-适配-3 解除）。
+
+## M4c：STEP 跨件闭环（S0 双态实证 ✅ + S2 主闭环归零复现 ✅ 2026-09-03）
+
+> M4c = STEP 打开（解除 D-适配-3 的副本口径）+ 跨件闭环（结构/刀具/参数/策略/MCS 维度，
+> 与工序几何无关——几何 known-skip 定案见上 M4 节）。探针链：`M4c_StepProbe.vb`
+> （vbc → exe / run_journal 直跑 .vb 均可——Q4 判读即两态对照）→ `JournalEntry.M4cStepProbe`
+> → `NxStepOpenProbe`（Export/NxStepOpenProbe.cs）。输出 `C:\nx-vibe-journal-out\m4c_stepopen.txt`。
+
+**静态实证（m4c_reflect1-4.ps1，无 NX 会话即答，产物留档 C:\nx-vibe-journal-out\m4c_reflect*_out.txt）**：
+- Session 无 Step/Import/Export 成员；`StepImportBuilder` / `StepExportBuilder` /
+  `Features.ImportFeatureBuilder` 不存在；PartCollection 仅 Open*/OpenBase 系（无 STEP 专用直开入口）；
+- **STEP 翻译器 = `Session.DexManager.CreateStep203/214/242Importer()`**（Builder 语义：
+  InputFile / ImportTo[WorkPart|NewPart] / FileOpenFlag / SewSurfaces / Optimize… + Commit/Destroy）——
+  Q1 的代码面已答，运行时只验 Commit 成败与产物形态（批处理/GUI 差异）。
+
+| # | 探针问题 | S0 双态实证结论（2026-09-03，批处理 run_journal + GUI File→Execute 各一轮） |
+| :--- | :--- | :--- |
+| 1 | Q1 STEP 打开路径 | **OpenDisplay 直开成功（双态同构）**：隐式翻译生效 → leaf=m4_gt_face_stp、bodies=1 → **M4c 打开路径定案 = 直开，无翻译器仪式**。DexManager 203/214/242（NewPart，SetMode=NativeFileSystem 后）Commit 返 null 静默失败——双态复现、与显示态无关 → known-issue 收口（后续需要 schema 强控/merge 导入时另开专项） |
+| 2 | Q2 产物挂 CAMSetup | **路径A ok（双态）**：直开产物挂 mill_planar 成功 → **M4c 重建载体定案 = OpenDisplay 直开 + CreateCamSetup**（D-适配-3 副本口径解除路径）。注意：无 CAM 零件读 `.CAMSetup` 属性即抛（非返 null），判读时勿误读。路径B（WorkPart 导入已挂 CAM 宿主件）报 "Part Import Error: Unable to import selected file to work part" → 弃 |
+| 3 | Q3 落位 | STEP 翻译件 WCS [0,0,0] = 对照件原点、bodies=1 几何完整 → **无坐标漂移**（MCS 对比基准风险排除） |
+| 4 | Q4 模式差异 | **双态同构**：Q1-①/Q2 两态结果一致；唯一差异 = GUI 错误消息本地化中文（判读无碍）→ M4c 后续验证两态皆可跑，批处理优先 |
+
+> 运行方式：退出全部 NX → `dotnet build` 适配层 → vbc 编译（compile_m4c_step_probe.bat）→
+> 批处理：`UGII_BATCH_MODE=1 "…\NXBIN\run_journal.exe" M4c_StepProbe.vb`；
+> GUI：NX 进入加工环境 → File → Execute → NX Open 选 M4c_StepProbe.exe → 回传 `m4c_stepopen.txt` 判读。
+
+> **S1（fixture，已完成 2026-09-03）**：STEP 主题件 = `parts\m4_gt_face.stp`（AP214 实落盘，8KB，
+> ST-Developer/NX2406.1700）。fixture 缺失时探针自动从对照件导出（`CreateStepCreator` 批处理可用，
+> **输出文件名 = 零件名**、OutputFile 仅定目录）；自动导出失败才需 GUI 手动兜底（导出名即零件名）。
+> 旁证：空体件（m1_template_metric.prt bodies=0）自动导出**静默无产物** → 空体 STEP 路线出局；
+> H15005-307(1).prt 批处理不可开（No Displayed Part，M4 先例一致）→ GUI-only 件，未选用。
+
+> **S2（主闭环，✅ 2026-09-03 GUI 实测归零复现）**：`M4c_Loop.vb` → `JournalEntry.M4cLoop`——与 M3Loop
+> 同构，**唯一差异 = 重建载体从另存副本换成 STEP 直开翻译件**（源 m1_template_metric.prt 现导 ground
+> truth plan → 载体 parts\m4_gt_face.stp OpenDisplay 直开 + CreateCamSetup → 重建 28/28 → 现导 plan″
+> → Compare）。**实测报告与 M3 副本口径逐字段一致**：structure 15/15（0 类型错/0 乱序/0 组差）、
+> tool 65/65、parameter 98/98、strategy 55 匹配 + 7 known_skip、mcs 1/1、geometry 0 对比（known-skip
+> 口径）、deviations 7 = 与 M3 同款豁免（mill_face/mill_chamfer 的 floor_stock/part_stock/depth_per_cut
+> 写保护表豁免，plan-comparer §3.8）→ **载体依赖偏差 = 0，plan 合同跨文件载体无歧义重建实证，
+> D-适配-3 解除**。归档：`C:\nx-vibe-journal-out\m4c_vs_m3.txt`（双报告逐字段对照）。
+> ground truth 选型依据：m1 件工序类型全在重建键表（M3 归零实证）；m4_gt_face.stp 载体几何/落位
+> S0 已证；m4_gt_face.prt 与空体件/H15005 件不可用原因见 S1 段旁证。
+> 运行方式：GUI 会话（op 模板注册表仅 GUI 加载）→ File → Execute → NX Open 选 M4c_Loop.exe；
+> 批处理不可跑（Create 必失败），无需尝试。
+
 ## 通用注意事项
 
 - 批处理会话初始无 Work Part——journal 内需 `Parts.Open`/新建 part；
