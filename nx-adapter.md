@@ -114,7 +114,7 @@ Program 前序 → 工序叶子序）；每命令 try/finally 保证 Builder Des
 | # | 决策点 | 定案 |
 | :--- | :--- | :--- |
 | D-适配-1 | 继承探测策略 | **直读生效值**（IsSet=true 全量）——plan-exporter.md 口径即"必须回读生效值"；继承态探测待 M0 确认 API 后作增强 |
-| D-适配-2 | 重建几何关联 | **MVP 不关联**（几何维度偏差显形为已知预期；FaceResolver 到位后升级） |
+| D-适配-2 | 重建几何关联 | **MVP 不关联**（几何维度偏差显形为已知预期；FaceResolver 到位后升级）——2026-09-03 定案补注：M4 探针全链实证 NX2406 mill_planar 域工序/组几何为 CAM 内部模型（特征/Ci/ScCollector 驱动），裸 Tag 面/体不向 `CAM.Geometry.GetItems` 物化（工序级/组级、Add/Commit/InitializeData 后恒空）→ 工序级面合同在本域按 known-skip 收口，面级几何归 3D 域后置（见核对清单 M4 节实证链） |
 | D-适配-3 | 重建载体 | **prj 另存副本**（几何同源、零 STEP 导入风险；STEP 打开后置，nx-plugin-design §4） |
 | D-适配-4 | 宿主形态 | **Journal 先行**（批处理 run_journal，无 add-in 注册/版本戳），INXAddIn 后置 |
 | D-适配-5 | 参数映射表落点 | 适配层数据表（plan 字段 → Builder 属性访问器），与 Core ParamRegistry 对称 |
@@ -128,6 +128,7 @@ Program 前序 → 工序叶子序）；每命令 try/finally 保证 Builder Des
 | M1 | 导出侧适配器 | ✅ 批处理实测：schema 0 错、两次导出字节一致、15 工序/4 刀具/1 setup 双射覆盖、无 ERROR（公制模板） |
 | M2 | 执行侧适配器 | ✅ GUI 会话实测（2026-09-03）：28/28 命令全执行、prj′ 落盘回读一致、technology 98/98 匹配、MCS 反射落点正确（mcs 1/1 偏差 0）。调试链见核对清单 M2 节（模板键语义 / find-or-create / 根组名解析 / 枚举宽松匹配） |
 | M3 | 最小闭环 | ✅ **真实偏差归零（2026-09-03 终态）**：导出→重建→再导出→Compare 全链跑通；structure=1.0 + tool 65/65 匹配 + parameter 全匹配 = plan 合同无歧义重建实证；deviations（WARNING）= 0，仅 7 条 known_skip（INFO，NX 写保护结构化豁免）。收敛历程见核对清单 M3 节（19→23→18→12→7→0，全程无 Core 缺陷） |
+| M4 | 几何维度 + STEP 跨件 | ⏳ 几何维度**定案 known-skip**（2026-09-03 写探针 v1-v5 实证：2.5D 域几何不裸化，工序级/组级全空——实证链见核对清单 M4 节）；STEP 跨件闭环（M4c，结构/刀具/参数/策略/MCS 维度）待做 |
 
 ## 7. 风险与边界
 

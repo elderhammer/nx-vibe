@@ -89,6 +89,54 @@
 > → 12（组名复用 + 写保护跳过）→ 7（豁免口径统一 + 两侧都有值豁免）→ **0 真实偏差**
 > （FormMill 读取补全 + MILL 类型落地）。全程无 Core 缺陷，全部为适配层保真度缺口。
 
+## M4：几何闭环（子步0 探针 v1-v4 实证 2026-09-03，GUI 运行待执行）
+
+> M4 = 解除 D-适配-2/3 镜像（几何维度三方从空转 0/0 到实读）+ STEP 跨件（nx-plugin-design §7-5）。
+> 探针链：`M4_GeoProbe.vb`（vbc → exe）→ `JournalEntry.M4GeoProbe` → `NxGeometryProbe`
+> （Export/NxGeometryProbe.cs）。输出 `C:\nx-vibe-journal-out\m4_geoprobe.txt`。
+
+**v1-v3 批处理实证结论（m1_template_metric.prt）**：
+- 读链离线定位成立：builder 几何角色 → `.GeometryList → GetContents → GeometrySet.GetItems`；
+  另有 GeometryCiBuilder 通用角色（全部 Builder 都有）与 Boundary/BoundaryPlanarMill 角色（平面族）。
+- **批处理加载态下所有几何容器为空**：CAM.Geometry 五角色（Blank/Wall/Check/CutArea/Part）各
+  set=1 但 items=0（`InitializeData(true)` 重载后仍 0）；BoundarySetList→list[1] 但
+  BoundaryMemberSetList→list[0]；组级仅 Orient 型（NONE/MCS/MCS_MAIN，无 WORKPIECE）。
+- 模板件工序为自动/特征驱动（AutoWallSelection=true；op 带 InsertFeature/RemoveFeature），
+  且几何物化呈会话耦合（与 M0 模板注册表同源的三态差异）——**几何读取须 GUI 显示态验证**。
+- 确定性 ✓（两遍指纹一致）；H15005 批处理 OpenDisplay/Parts.Open 均返 null（文件级加载失败，GUI 待验）。
+- P3 离线已证：.NET UF **无** ask_face_area/ask_face_normals（nxopen-research §2.3 过时），
+  只有 AskFaceData（类型码/面内点/方向/盒）+ AskFaceProps（(u,v) 处单位法向）；托管无 Measure* 创建入口。
+
+| # | 探针问题 | GUI 判读指引 |
+| :--- | :--- | :--- |
+| 1 | P1 各 op 的 Builder 上哪些几何角色承载关联几何 | `role: sets=N items=M`（角色名频次表 = M4a 映射表输入）；期望显示态下面铣/平面类 op 至少一角色有 items |
+| 2 | P2 载荷形态（Face/Edge/BoundaryMember/其他） | 元素类型名决定 M4a 分类口径；若 GUI 下仍全空 → 模板件工序确无显式存储几何，M4 需显式面选择 ground truth（用户 GUI 手编小件） |
+| 3 | P3 面属性 API | AskFaceData/AskFaceProps 在真实面上是否可读；面积/质心路线（两成员无命中 → 边界环积分或测量 API 次轮探针） |
+| 4 | P4 两遍枚举指纹一致 | 确定性硬验收（导出侧字节级一致的前提） |
+
+> 运行方式（GUI 会话，同 M2/M3）：退出全部 NX → `dotnet build` 适配层 → vbc 编译
+> `M4_GeoProbe.vb` → `C:\nx-vibe-journal-out\M4_GeoProbe.exe`（编译命令见该文件头注 / compile_m4_probe.bat）→
+> NX GUI 打开加工环境 → File → Execute → NX Open 选 M4_GeoProbe.exe →
+> 回传 `m4_geoprobe.txt` 判读（loader 会自行打开/定位 m1_template_metric.prt + H15005-307(1).prt）。
+
+> **2026-09-03 GUI 实测补充（写探针 v1-v5 全链实证）**：几何容器在 GUI 与批处理一致全空；
+> H15005 GUI 亦不可用。程序化自建 ground truth（`M4_WProbe.vb` → `JournalEntry.M4GeoWriteProbe`
+> → `NxGeoWriterProbe`）逐轮实证：方块体/刀具组/工序（POCKETING 系，VolumeBased25D 五角色）
+> 创建全部可行（Create 传 subtype=null 会原生 AV——键表 key 是 plan 类型非模板名）；
+> 但几何写/读全部落空：`AppendGeometrySet` 原生 AV（模板集语义不明）；`CreateGeometrySet +
+> Selection.Add(单参)` 调用成功 + InitializeData(true) + Commit 后回读仍 sets=1 items=0
+> （工序级五角色 + 组级 WORKPIECE 的 PartGeometry/CheckGeometry 全部如此——Add 不向
+> CAM 数据库物化）；几何树实证结构 `GEOMETRY→MCS_MAIN→WORKPIECE→MCS_LOCAL`；
+> MillGeomBuilder 属性面揭示 BlankGeometry:GeometryGroup / GeometryCiBuilder / LayoutCiBuilder
+> 等内部模型。**收敛结论（M4 几何维度定案）**：NX2406 的 2.5D 域（mill_planar 族）工序/组几何
+> 为 CAM 内部模型（特征/Ci/ScCollector/拓扑驱动），裸 Tag 面/体不向 `CAM.Geometry.GetItems`
+> 物化——工序级与组级、模板态与挂接态、批处理与 GUI 全一致。plan 的工序级
+> `geometry_ref`（face anchor）合同在 2.5D NX 侧无落点 → 该维度按 **known-skip（NX API
+> 边界，INFO 结构化豁免）** 收口，工序级面合同验证归 3D 域（mill_contour 等显式面选择域 +
+> FaceResolver）后置（与 nx-plugin-design §6 2.5D 边界声明一致）。Core 侧 faces→features
+> anchor 管线已由合成快照实证（features 含 anchor=3、schema 0 错）——合同与拍平逻辑无缺陷。
+> M4 余项：M4c STEP 跨件闭环（结构/刀具/参数/策略/MCS 维度，与工序几何无关）继续。
+
 ## 通用注意事项
 
 - 批处理会话初始无 Work Part——journal 内需 `Parts.Open`/新建 part；

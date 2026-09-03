@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using Autocam.Nx.Adapter.Export;
@@ -9,6 +10,7 @@ using Autocam.PlanComparer.Core.Compare;
 using Autocam.PlanComparer.Core.Report;
 using Autocam.PlanExporter.Core.Export;
 using NXOpen;
+using NXOpen.UF;
 
 namespace Autocam.Nx.Adapter.Journals
 {
@@ -18,6 +20,126 @@ namespace Autocam.Nx.Adapter.Journals
     /// </summary>
     public static class JournalEntry
     {
+        /// <summary>
+        /// M4 子步0 读探针 v4（GUI 会话执行——v3 批处理实证：几何列表空容器为模板件构造使然，
+        /// 非会话耦合；模板件工序无显式几何可读）。已由几何写探针（M4GeoWriteProbe）取代作为
+        /// ground truth 构造器。保留本入口供对照复跑：模板件 + 可选第二件。
+        /// 输出 outDir/m4_geoprobe.txt。
+        /// </summary>
+        public static string M4GeoProbe(string partA, string partB, string outDir)
+        {
+            var sb = new StringBuilder();
+            foreach (var partPath in new[] { partA, partB })
+            {
+                if (string.IsNullOrEmpty(partPath))
+                {
+                    continue;
+                }
+                try
+                {
+                    var session = Session.GetSession();
+                    var camSetup = OpenOrFindSource(session, partPath, sb);
+                    if (camSetup != null)
+                    {
+                        sb.AppendLine(NxGeometryProbe.Probe(camSetup));
+                    }
+                    else
+                    {
+                        sb.AppendLine("零件 " + partPath + " 不可用（未开/无 CAMSetup），跳过");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    sb.AppendLine("零件 " + partPath + " 处理失败: " + ex);
+                }
+            }
+            var report = sb.ToString();
+            File.WriteAllText(Path.Combine(outDir, "m4_geoprobe.txt"), report);
+            return report;
+        }
+
+        /// <summary>
+        /// M4 几何写探针 v2（GUI 会话，零 UI 操作）：自建含显式面几何的 ground truth——
+        /// 新零件 + CAMSetup（SessionBootstrap.NewPartWithCamSetup，模板件自身无体不依赖）
+        /// → NxGeoWriterProbe.Run：程序化方块体 + 刀具组 + 3 个显式挂面工序 + 回读（角色矩阵）
+        /// → SaveAs parts\m4_gt_face.prt → 导出管线验证 features[].geometry_ref 落地。
+        /// 输出 outDir/m4_wprobe.txt + parts\m4_gt_face.prt + parts\m4_gt_plan.json。
+        /// </summary>
+        public static string M4GeoWriteProbe(string planSchemaPath, string outDir)
+        {
+            var sb = new StringBuilder();
+            try
+            {
+                var session = Session.GetSession();
+                // 预热：先定位/打开 CAM 模板件触发加工模板注册表完整加载（M2/M3 运行仪式——
+                // 工序 subtype 仅随已开 CAM 零件/进入加工环境注册；空会话直接 Create 工序
+                // 曾实测内存访问违例）。预热会把 Work 切到模板件，NewPartWithCamSetup 会再设 Work。
+                try
+                {
+                    var warm = OpenOrFindSource(session, Path.Combine(outDir, "parts", "m1_template_metric.prt"), sb);
+                    sb.AppendLine("预热（模板注册表）: " + (warm == null ? "(未找到模板件——继续，注册表可能不全)" : "ok"));
+                }
+                catch (Exception warmEx)
+                {
+                    sb.AppendLine("预热跳过: " + warmEx.Message);
+                }
+                var partName = "m4_gtw_" + DateTime.Now.ToString("HHmmss");
+                var camSetup = SessionBootstrap.NewPartWithCamSetup(session, partName);
+                sb.AppendLine("新零件 + CAMSetup 已建: " + partName);
+                var uf = UFSession.GetUFSession();
+                Dictionary<string, List<NXOpen.Face>> attached;
+                sb.AppendLine(Export.NxGeoWriterProbe.Run(camSetup, sb, uf, out attached));
+
+                // 另存 ground truth（固定文件名，重复跑先删旧）
+                var copyPath = Path.Combine(outDir, "parts", "m4_gt_face.prt");
+                try
+                {
+                    if (File.Exists(copyPath))
+                    {
+                        File.Delete(copyPath);
+                    }
+                    session.Parts.Work.SaveAs(copyPath);
+                    sb.AppendLine("ground truth 已落盘: m4_gt_face.prt");
+                }
+                catch (Exception saveEx)
+                {
+                    sb.AppendLine("ground truth 落盘失败: " + saveEx.Message);
+                }
+
+                // 导出管线验证（补 Faces/GeometryTags 后走原管线）
+                var diag = new DiagnosticsCollector();
+                var snapshot = Export.NxGeoWriterProbe.BuildSnapshotWithFaces(
+                    camSetup, "m4_gt_face", copyPath, diag, attached);
+                var plan = PlanExportPipeline.Export(snapshot, new CapabilityProfile());
+                var json = PlanSerializer.Serialize(plan);
+                sb.AppendLine("plan: ops=" + plan.Operations.Count + " features=" + plan.Features.Count);
+                int withGeom = 0;
+                foreach (var f in plan.Features)
+                {
+                    if (f.GeometryRef != null && f.GeometryRef.AnchorPoint != null)
+                    {
+                        withGeom++;
+                    }
+                }
+                sb.AppendLine("features 含 anchor: " + withGeom);
+                var validator = PlanSchemaValidator.LoadAsync(planSchemaPath).GetAwaiter().GetResult();
+                sb.AppendLine("plan schema 校验错误数: " + validator.Validate(json).Count);
+                File.WriteAllText(Path.Combine(outDir, "parts", "m4_gt_plan.json"), json);
+            }
+            catch (Exception ex)
+            {
+                sb.AppendLine("M4 写探针 FATAL: " + ex);
+            }
+            return WriteReport(sb, outDir, "m4_wprobe.txt");
+        }
+
+        private static string WriteReport(StringBuilder sb, string outDir, string name)
+        {
+            var report = sb.ToString();
+            File.WriteAllText(Path.Combine(outDir, name), report);
+            return report;
+        }
+
         /// <summary>
         /// M1：导出验证。打开零件 → 快照 → 导出 → schema 校验 → 再导一次（确定性字节对比）。
         /// 输出 outDir/plan.json + outDir/m1_export.txt。
