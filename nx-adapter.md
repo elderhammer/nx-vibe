@@ -127,7 +127,7 @@ Program 前序 → 工序叶子序）；每命令 try/finally 保证 Builder Des
 | M0 | API 预研 journal（5 个未知点，见核对清单） | ✅ 5 点全答 + 发现批处理对象模板限制（详见核对清单） |
 | M1 | 导出侧适配器 | ✅ 批处理实测：schema 0 错、两次导出字节一致、15 工序/4 刀具/1 setup 双射覆盖、无 ERROR（公制模板） |
 | M2 | 执行侧适配器 | ✅ GUI 会话实测（2026-09-03）：28/28 命令全执行、prj′ 落盘回读一致、technology 98/98 匹配、MCS 反射落点正确（mcs 1/1 偏差 0）。调试链见核对清单 M2 节（模板键语义 / find-or-create / 根组名解析 / 枚举宽松匹配） |
-| M3 | 最小闭环 | ✅ 完整闭环（2026-09-03）：导出→重建→再导出→Compare 全链跑通；structure=1.0（plan 合同无歧义重建实证）；deviations=19 全归因（tool 表达力 ×11 + VolumeBased 写路径 ×8，无 Core 缺陷）。批处理部分闭环 ✅（自对比零偏差） |
+| M3 | 最小闭环 | ✅ **真实偏差归零（2026-09-03 终态）**：导出→重建→再导出→Compare 全链跑通；structure=1.0 + tool 65/65 匹配 + parameter 全匹配 = plan 合同无歧义重建实证；deviations（WARNING）= 0，仅 7 条 known_skip（INFO，NX 写保护结构化豁免）。收敛历程见核对清单 M3 节（19→23→18→12→7→0，全程无 Core 缺陷） |
 
 ## 7. 风险与边界
 
@@ -139,5 +139,6 @@ Program 前序 → 工序叶子序）；每命令 try/finally 保证 Builder Des
 | 许可/版本差异 | CapabilityProfile 探测（MVP 返空画像 + 登记；逐参数版本探测后补） |
 | 模板注册表仅真 GUI 会话加载（M0 + 2026-09-03 三态实测） | 批处理与 run_journal 交互会话均缺组/工序 subtype 注册（Create 必失败「需要的模板不存在」，打开 CAM 零件预热无效）；导出侧纯读不受影响；执行侧须在用户已进入加工环境的真会话跑**编译入口 EXE**（vbc 编 VB 装载器 → File → Execute → NX Open，核对清单 M2 节） |
 | Create* 键语义 + 模板默认组（2026-09-03 实测） | 键 = (setup 族, subtype)（如 `CreateMethod(parent,"mill_planar","MILL_METHOD",…)`），旧式 typeName 全失效——executor 键表化见 NxTemplateKeys（含 plan 导出类型→mill_planar 族 Operation subtype 反向映射，探针 M2_Probe2 ③ 实测建表）；GUI 会话新 setup 自带模板默认组（PROGRAM/MILL_ROUGH/MCS_MAIN…）→ 组命令 find-or-create 复用；plan 根/约定组名 == 视图根组名（NC_PROGRAM/METHOD）→ 根组即目标组 |
-| 参数写路径按 builder 类型覆盖不全（VolumeBased25D 系） | M3 strategy 8 条偏差归因：路径缺失 → Set 跳过（warning）→ 继承新 subtype 模板默认（0.2/1.0/LEVEL_FIRST）。修法：NxParamPaths 按 builder 类型参数子集表扩展（README 遗留 3 的适配层版本） |
-| plan 工具合同表达力（模板工件/空参数刀具组） | M3 tool 11 条 extra 归因：合同带不出非标准组 → 重建默认物化 → 再导出数量漂移 + 默认值字段（T-005 幻影 = 导出收编默认空组）。修法：导出侧过滤不可读/模板工件组或合同增强，清零 tool 维度 |
+| NX 写保护字段（Facing/EdgeChamfer 的 stock 类） | ✅ 已处置（2026-09-03）：E 段一段式/两段式对照实证 Commit 必回滚——重建值由 NX 模板固化，plan 无法驱动。NxWriteProtection 表（plan 类型×字段）+ 执行侧跳过 + 比较侧 UnwritableByPlanType 结构化豁免（known_skip INFO，绝不静默） |
+| plan 工具合同表达力（模板工件/空参数刀具组） | ✅ 已处置（2026-09-03）：schema 加 tool.name（导出组名 → 重建 find-or-create 复用同名模板组，两侧同构）；MILL_USER_DEFINED 成形刀经 MillFormToolBuilder 补读参数（type 近似 END_MILL + warning，diameter 读 HelicalDiameter——G 段实测）；程序化 Create 的刀具重定向（PLANAR_MILL 挂 FormMill 被 NX 强制改挂 MILL）经「带参数 MILL 刀落地」消解——tool 维度 65/65 匹配 0 偏差 |
+| NX 程序化 Create 语义边界（G3 实测） | PLANAR_MILL 类工序挂 FormMill 刀无条件重定向 MILL（与刀有无参数无关；原件 UI 手工可达、程序化不可达）——重建侧以带参数 MILL 刀落地（近似口径，导出侧 warning 显形），勿尝试程序化复刻 UI 状态 |
