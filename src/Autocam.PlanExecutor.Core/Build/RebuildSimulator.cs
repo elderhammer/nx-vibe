@@ -35,11 +35,14 @@ namespace Autocam.PlanExecutor.Core.Build
                         break;
 
                     case CreateToolGroupCommand t:
+                        // 组名 = 原件组名（SourceName，合同增强 tool.name）；旧合同（无 SourceName）
+                        // 用命令名。与适配层 find-or-create 语义对齐（RoundTrip 性质的要求）。
+                        var toolGroupName = string.IsNullOrEmpty(t.SourceName) ? t.Name : t.SourceName;
                         var tool = new GroupSnapshot
                         {
                             Kind = GroupKind.Tool,
-                            Name = t.Name,
-                            DisplayName = t.Name,
+                            Name = toolGroupName,
+                            DisplayName = toolGroupName,
                             Params = new Dictionary<string, object>(t.Params),
                         };
                         setup.ToolGroups.Add(tool);

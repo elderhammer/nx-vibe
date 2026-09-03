@@ -86,6 +86,10 @@
           "type": "string",
           "description": "刀具唯一标识，operations[].tool_ref 引用对象"
         },
+        "name": {
+          "type": "string",
+          "description": "NX 侧刀具组名（导出组名；重建侧 find-or-create 复用同名模板组——NX 模板工件组如 NONE/MILL_USER_DEFINED 无参数可读，按名复用保持两侧同构）"
+        },
         "type": {
           "type": "string",
           "pattern": "^[A-Z][A-Z0-9_]*$",

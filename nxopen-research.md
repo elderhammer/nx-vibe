@@ -740,6 +740,31 @@ diagnostics[]   (info/warning/error)
 
 ---
 
+## 附：官方文档资源与使用方法（2026-09-03 实测补充）
+
+> 本文档早期多处口径已过时（M0 实测，见 nx-journal-manual-verification.md）——
+> **任何 API 使用前必须实测确认**（探针纪律，见 dev-pattern.md）。官方资源的作用是
+> 「导航」（知道有什么 API）而非「权威」（API 在具体状态下做什么只有实测能答）。
+
+### 本机官方资源（随 NX 安装，无需联网/登录）
+
+| 路径 | 内容 | 用法 |
+| :--- | :--- | :--- |
+| `C:\Program Files\Siemens\NX2406\UGOPEN\NXOpen\*.hxx` | **C++ 头文件（自动生成，含文档注释）** | 查类继承链（如 `MillFormToolBuilder : public MillingToolBuilder`——直径/刃数等属性全在基类）、属性一句话语义（如 `HelicalDiameter` = "the helical diameter"、`TlDiameterBuilder` = "the Tool Diameter builder (inheritable double)"）、创建入口指引（类注释里 `To create a new instance, use CreateXxxBuilder`）、版本信息（`Created in NX5.0.0` 等，能力探测口径） |
+| `C:\Program Files\Siemens\NX2406\UGOPEN\NXOpenExamples` / `SampleNXOpenApplications` | 官方样例代码 | 学习官方用法示范（创建/回读/销毁模式） |
+| `C:\Program Files\Siemens\NX2406\UGOPEN\exphdrs\` | 导出头文件（UFUN 等） | Open C API 查询 |
+
+**使用纪律（2026-09-03 实测结论）**：
+1. 头文件是 **C++ 口径**，与 .NET 托管 API 有命名/签名差异——查语义与继承链可靠，签名以
+   .NET 反射为准（探针 dump）。
+2. 头文件回答「属性存在性与一句话描述」，**不回答行为语义**——模板注册表三态、Commit
+   回滚、程序化 Create 的刀具重定向等本项目的全部根因，头文件均无记载，一律以探针实测为准。
+3. 头文件的价值案例：MillFormToolBuilder 继承链（基类含全部刀具参数属性）+ HelicalDiameter
+   描述，配合探针 G 段实测（HelicalDiameter=90 = 成形刀实际切削直径）共同定位了
+   MILL_USER_DEFINED 组的正确读取路径。
+
+---
+
 ## 附：后续验证计划（建议）
 
 1. 在 NX 2406 上用 `run_journal.exe -nogui` 跑通 3.2 的最小示例（建组 → Create → Builder 设参 → Commit → generateToolPath），确认 typeName/Builder 名称与文档一致。

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 
 namespace Autocam.Plan.Core.Dto
@@ -20,5 +21,14 @@ namespace Autocam.Plan.Core.Dto
         /// 处置：域内工序报 error 并跳过该工序，其余继续（§3.2-3 / I7）。
         /// </summary>
         public HashSet<string> UnavailableLicenses { get; set; } = new HashSet<string>();
+
+        /// <summary>
+        /// NX 侧写保护字段（plan 工序类型 → 字段名集，如 FACE_MILLING × floor_stock——
+        /// NXOpen 层无条件回滚/不可表达，M3_Probe E 段实测）。与 UnsupportedParams 的区别：
+        /// 版本缺能力（按参数名全局）vs 语义写保护（按工序类型×字段细粒度）。
+        /// 处置：执行侧跳过写入 + 比较侧按同表 known_skip 豁免（绝不静默——豁免判定必须命中本表）。
+        /// </summary>
+        public Dictionary<string, HashSet<string>> UnwritableByPlanType { get; set; }
+            = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
     }
 }

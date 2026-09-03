@@ -60,10 +60,12 @@ namespace Autocam.PlanComparer.Core.Compare
             {
                 ParamDictComparer.CompareDicts(
                     pair.Left.Op.Technology, pair.Right.Op.Technology,
-                    ReportDimensions.Parameter, pair.Left.Op.OperationId, capability, rows, diag, tally);
+                    ReportDimensions.Parameter, pair.Left.Op.OperationId, pair.Left.Op.OperationType,
+                    capability, rows, diag, tally);
                 ParamDictComparer.CompareDicts(
                     pair.Left.Op.Strategy, pair.Right.Op.Strategy,
-                    ReportDimensions.Strategy, pair.Left.Op.OperationId, capability, rows, diag, tally);
+                    ReportDimensions.Strategy, pair.Left.Op.OperationId, pair.Left.Op.OperationType,
+                    capability, rows, diag, tally);
             }
             McsComparer.Compare(leftSide, rightSide, rows, diag, tally);
             GeometryComparer.Compare(pairs, leftSide, rightSide, rows, diag, tally);

@@ -69,7 +69,13 @@ namespace Autocam.PlanExecutor.Core.Build
             {
                 if (toolSeen.Add(s.Op.ToolRef))
                 {
-                    result.Commands.Add(new CreateToolGroupCommand { Name = s.Op.ToolRef, Params = ToolParams(toolById[s.Op.ToolRef]) });
+                    var tool = toolById[s.Op.ToolRef];
+                    result.Commands.Add(new CreateToolGroupCommand
+                    {
+                        Name = s.Op.ToolRef,
+                        SourceName = tool.Name,
+                        Params = ToolParams(tool),
+                    });
                 }
             }
             var setupSeen = new HashSet<string>();
@@ -98,6 +104,7 @@ namespace Autocam.PlanExecutor.Core.Build
                 {
                     Name = s.LeafName,
                     TypeName = s.TypeName,
+                    PlanOperationType = s.Op.OperationType,
                     SubtypeName = s.Op.NxTemplate?.Subtype ?? "",
                     ProgramGroupName = s.ProgramGroupName,
                     MethodGroupName = MethodGroupNaming.ForDomain(s.Domain),

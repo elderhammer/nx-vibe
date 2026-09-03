@@ -27,6 +27,11 @@ namespace Autocam.PlanExecutor.Core.Build
     {
         public override string Kind => "CREATE_TOOL_GROUP";
         public string Name { get; set; }
+
+        /// <summary>原件 NX 刀具组名（plan tool.name，可空=旧合同）。
+        /// 适配层 find-or-create 按此复用模板同名组（模板工件组参数不可读，按名复用保持两侧同构）；
+        /// 模拟器不使用（命令语义 = Name 建组）。</summary>
+        public string SourceName { get; set; }
         public Dictionary<string, object> Params { get; set; }
     }
 
@@ -60,6 +65,9 @@ namespace Autocam.PlanExecutor.Core.Build
     public sealed class CreateOperationCommand : RebuildCommand
     {
         public override string Kind => "CREATE_OPERATION";
+        /// <summary>plan operation_type 原值（TypeMapper 归一口径，如 mill_face/mill_chamfer）——
+        /// 适配层写保护表（NxWriteProtection）按此口径查键；与比较器 pair.Left.Op.OperationType 同口径。</summary>
+        public string PlanOperationType { get; set; }
         public string Name { get; set; }
         public string TypeName { get; set; }
         public string SubtypeName { get; set; }
