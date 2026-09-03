@@ -22,6 +22,7 @@ namespace Autocam.Nx.Adapter.Policies
         public const string ProgramGroup = "PROGRAM";
         public const string MethodGroup = "MILL_METHOD";
         public const string ToolGroupMill = "MILL";
+        public const string ToolGroupMillUserDefined = "MILL_USER_DEFINED";   // type-less 原件条目新建用（对称不可读）
         public const string ToolGroupDrill = "DRILL";   // 待 hole_making 族 Tool 枚举验证（当前 part 无钻头）
         public const string GeometryGroupMcs = "MCS";
 

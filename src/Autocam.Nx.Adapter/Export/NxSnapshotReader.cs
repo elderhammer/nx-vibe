@@ -193,21 +193,31 @@ namespace Autocam.Nx.Adapter.Export
 
         private static void ReadToolParams(CAMSetup camSetup, NCGroup group, GroupSnapshot target, DiagnosticsCollector diag)
         {
-            if (TryReadTool(camSetup.CAMGroupCollection.CreateMillToolBuilder, group, target, "END_MILL"))
+            if (TryReadTool(camSetup.CAMGroupCollection.CreateMillToolBuilder, group, target, "END_MILL", null))
             {
                 return;
             }
-            if (TryReadTool(camSetup.CAMGroupCollection.CreateDrillStdToolBuilder, group, target, "DRILL"))
+            if (TryReadTool(camSetup.CAMGroupCollection.CreateDrillStdToolBuilder, group, target, "DRILL", null))
             {
+                return;
+            }
+            // 用户自定义成形刀（M3_Probe G 段实测：MILL_USER_DEFINED 组唯一可用工厂）。
+            // type 近似 END_MILL（plan 合同无成形刀类型；近似在导出侧归一 + warning 绝不静默，
+            // 重建侧以真实 MILL 类型落地——nx-plugin-design §6 近似工序口径）；diameter 读
+            // HelicalDiameter（成形刀的实际切削直径，G1 实测 TlDiameterBuilder=0 而它=90）。
+            if (TryReadTool(camSetup.CAMGroupCollection.CreateMillFormToolBuilder, group, target, "END_MILL", "HelicalDiameter"))
+            {
+                diag.Warning("TOOL_APPROX_FORM_MILL",
+                    string.Format("刀具组 {0} 为用户自定义成形刀，type 近似 END_MILL（原始类型见 GetNameOfType），diameter 取 HelicalDiameter", group.Name));
                 return;
             }
             diag.Warning("TOOL_BUILDER_FAILED",
-                string.Format("刀具组 {0} 无法取 MillToolBuilder/DrillStdToolBuilder，刀具参数缺项（nx-adapter.md §2.1）", group.Name));
+                string.Format("刀具组 {0} 无法取 MillToolBuilder/DrillStdToolBuilder/MillFormToolBuilder，刀具参数缺项（nx-adapter.md §2.1）", group.Name));
         }
 
         private delegate object ToolBuilderFactory(NCGroup group);
 
-        private static bool TryReadTool(ToolBuilderFactory factory, NCGroup group, GroupSnapshot target, string typeName)
+        private static bool TryReadTool(ToolBuilderFactory factory, NCGroup group, GroupSnapshot target, string typeName, string diameterPathOverride)
         {
             object builder = null;
             try
@@ -216,7 +226,8 @@ namespace Autocam.Nx.Adapter.Export
                 target.Params["type"] = typeName;
                 foreach (var pair in NxParamPaths.Tool)
                 {
-                    var leaf = ValueExtractor.ReadPath(builder, pair.Value);
+                    var path = pair.Key == "diameter" && diameterPathOverride != null ? diameterPathOverride : pair.Value;
+                    var leaf = ValueExtractor.ReadPath(builder, path);
                     var value = ValueExtractor.Extract(leaf);
                     if (value != null)
                     {

@@ -72,18 +72,22 @@
 > 方法组约定名 == 视图根组自身名（NC_PROGRAM / METHOD）→ 根组即目标组；④ plan 大写蛇形枚举 ↔ NX
 > Pascal 枚举（LEVEL_FIRST↔LevelFirst）→ SetLeaf 宽松等价匹配，失败降级 warning + 跳参（失败隔离）。
 
-## M3：完整闭环（M3_Partial.vb 批处理部分闭环 ✅ / M3_Loop.exe 完整闭环 ✅ 2026-09-03）
+## M3：完整闭环（M3_Partial.vb 批处理部分闭环 ✅ / M3_Loop.exe 完整闭环 ✅ 2026-09-03 全归零）
 
 | # | 核对点 | 结果 |
 | :--- | :--- | :--- |
-| 1 | 报告生成且过报告 schema 校验 | ✅ 完整闭环报告 0 校验错（m3_report.json）；批处理部分闭环 0 错 |
-| 2 | 偏差类别符合预期且每条可归因 | ✅ structure=1.0（15/15 配对，0 missing/extra/order_swap/type_mismatch）；deviations=19 全归因：tool extra ×11 = plan 合同表达不了的模板工件/空参数刀具组 → 重建默认物化 → 再导出数量漂移 + 默认值字段（T-005 幻影 = 导出把默认空组收编为刀具；UI 实物仅 NONE+T-001..T-004）；strategy 偏差 ×7 + missing ×1 = VolumeBased25D 系写路径覆盖不全 → Set 跳过 → 继承新 subtype 模板默认（floor_stock 0.2/part_stock 1.0/cut_order LEVEL_FIRST，原件为旧模板 0/0/DEPTH_FIRST）；parameter 98/98、mcs 1/1 全匹配；geometry 0/0 = 几何不读（D-适配-2 镜像）已知限制 |
-| 3 | 报告确定性 | ✅ 导出字节级一致已证 + Core 确定性锁定（本次未复跑，由上述两者继承） |
-| 4 | 完整闭环（GUI）：导出 → 重建 → 再导出 → 跨件对比 | ✅ m3_loop.txt：15 工序/4 刀具/1 setup ×2 导出 schema 0 错 → 28 命令全执行 → prj′ 落盘 → plan″ 15 工序/5 刀具（+1 幻影）→ Compare → 报告 0 校验错 |
+| 1 | 报告生成且过报告 schema 校验 | ✅ 完整闭环报告 0 校验错；批处理部分闭环 0 错 |
+| 2 | 偏差类别符合预期且每条可归因 | ✅ **最终态（2026-09-03 收敛）：真实偏差（WARNING 级）= 0**。deviations 数组仅 7 条 known_skip（INFO 豁免记录，结构化命中 NxWriteProtection 表）。structure=1.0（15/15 配对）；tool 维度 65/65 匹配 0 偏差；strategy 55 匹配 + 7 豁免；parameter 全匹配；mcs 全匹配；geometry 0/0 = 几何不读（D-适配-2 镜像）已知限制 |
+| 3 | 报告确定性 | ✅ 导出字节级一致 + Core 确定性锁定 + 三轮复跑同结果 |
+| 4 | 完整闭环（GUI）：导出 → 重建 → 再导出 → 跨件对比 | ✅ m3_loop.txt：15 工序/4 刀具/1 setup ×2 导出 schema 0 错 → 28 命令全执行 → prj′ 落盘 → plan″ 15 工序/4 刀具（同构）→ Compare → 报告 0 校验错 |
 
-> **闭环判定（2026-09-03）**：structure=1.0 证明「plan 合同可无歧义重建」（Core 零基线性质的
-> 真实 NX 预演版）；19 条偏差**全部归因到适配层保真度缺口**（写路径覆盖 + 合同表达力），无一条
-> 不可解释、无 Core 缺陷——遗留修表项见 nx-adapter.md §7 与 src/README 遗留。
+> **闭环判定（2026-09-03 终态）**：structure=1.0 + tool 65/65 + parameter 全匹配 =
+> 「plan 合同可无歧义重建」在真实 NX 完全成立；7 条 known_skip 全部为 NX 写保护豁免
+> （Facing/EdgeChamfer 的 stock 类字段 Commit 必回滚，E 段一段式/两段式对照实证——重建值由
+> NX 模板固化，plan 无法驱动，结构化豁免不静默）。
+> **收敛历程**：19（tool 物化 + 写路径缺口）→ 23（CanWrite 回归，已归因）→ 18（CanWrite 修复）
+> → 12（组名复用 + 写保护跳过）→ 7（豁免口径统一 + 两侧都有值豁免）→ **0 真实偏差**
+> （FormMill 读取补全 + MILL 类型落地）。全程无 Core 缺陷，全部为适配层保真度缺口。
 
 ## 通用注意事项
 

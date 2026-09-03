@@ -45,6 +45,11 @@ namespace Autocam.Plan.Core.Plan
     public sealed class ToolEntry
     {
         public string ToolId { get; set; }
+
+        /// <summary>NX 侧刀具组名（导出组名）。重建侧 find-or-create 复用同名模板组——
+        /// 模板工件组（NONE/MILL_USER_DEFINED 等）参数不可读，按名复用保持两侧同构
+        /// （schema 可选字段，plan-exporter.md 合同增强）。</summary>
+        public string Name { get; set; }
         public string Type { get; set; }
         public double? Diameter { get; set; }
         public int? NumFlutes { get; set; }

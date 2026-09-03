@@ -28,6 +28,13 @@ namespace Autocam.PlanComparer.Core.Tests.TestDoubles
             return new CompareContext { RightCapability = cap };
         }
 
+        public static CompareContext WithUnwritable(string planType, params string[] fields)
+        {
+            var cap = new CapabilityProfile();
+            cap.UnwritableByPlanType[planType] = new System.Collections.Generic.HashSet<string>(fields);
+            return new CompareContext { RightCapability = cap };
+        }
+
         // ---- plan 构造 ----
 
         /// <summary>单工序 drill：tool/setup/mcs/anchor/strategy/technology 全字段。</summary>

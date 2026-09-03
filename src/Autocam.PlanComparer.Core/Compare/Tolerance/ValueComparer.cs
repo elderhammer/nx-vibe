@@ -66,6 +66,60 @@ namespace Autocam.PlanComparer.Core.Compare.Tolerance
             return outcome;
         }
 
+        /// <summary>
+        /// 无副作用判等（写保护豁免分支用）：数值按容差口径、向量按欧氏距离、其余 Equals。
+        /// 不写 rows、不写 tally、不发缺表 warning（豁免字段已在结构化表中，值差异判定只需真假）。
+        /// </summary>
+        public static bool AreEquivalent(object left, object right, string fieldPath)
+        {
+            left = Normalize(left);
+            right = Normalize(right);
+            if (IsNumber(left) && IsNumber(right))
+            {
+                return NumbersMatch(ToDouble(left), ToDouble(right), fieldPath);
+            }
+            if (IsVector(left) && IsVector(right))
+            {
+                var l = ToDoubles(left);
+                var r = ToDoubles(right);
+                if (l.Count != r.Count)
+                {
+                    return false;
+                }
+                var spec = ToleranceRegistry.Default;
+                ToleranceRegistry.TryLookup(fieldPath, out spec);
+                var limit = spec.Kind == ToleranceKind.VectorMm ? spec.Value : ToleranceRegistry.Mm;
+                var dist = 0.0;
+                for (var i = 0; i < l.Count; i++)
+                {
+                    var d = r[i] - l[i];
+                    dist += d * d;
+                }
+                return Math.Sqrt(dist) <= limit;
+            }
+            return Equals(left, right);
+        }
+
+        private static bool NumbersMatch(double left, double right, string fieldPath)
+        {
+            var spec = ToleranceRegistry.Default;
+            ToleranceRegistry.TryLookup(fieldPath, out spec);
+            var delta = right - left;
+            switch (spec.Kind)
+            {
+                case ToleranceKind.Exact:
+                    return delta == 0;
+                case ToleranceKind.AbsoluteMm:
+                    return Math.Abs(delta) <= spec.Value;
+                case ToleranceKind.RelativePercent:
+                    var max = Math.Max(Math.Abs(left), Math.Abs(right));
+                    var r = max == 0 ? 0 : Math.Abs(delta) / max;
+                    return r <= spec.Value / 100.0;
+                default:
+                    return delta == 0;
+            }
+        }
+
         private static CompareOutcome CompareNumbers(
             double left, double right,
             string fieldPath, string dimension, string operationRef,

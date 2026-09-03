@@ -110,10 +110,23 @@ namespace Autocam.Nx.Adapter.Rebuild
                     var toolType = t.Params != null && t.Params.TryGetValue("type", out var tv) && "DRILL".Equals(tv as string)
                         ? "DRILL"
                         : "MILL";
-                    var toolSubtype = toolType == "DRILL" ? NxTemplateKeys.ToolGroupDrill : NxTemplateKeys.ToolGroupMill;
-                    var toolGroup = FindChildGroup(toolRoot, t.Name)
-                        ?? camSetup.CAMGroupCollection.CreateTool(toolRoot,
-                            NxTemplateKeys.SetupFamily, toolSubtype, UseDefaultGroup, t.Name);
+                    // 空参数（type-less 原件条目，如 MILL_USER_DEFINED/NONE——导出侧 builder
+                    // 不可读）→ 新建时用 MILL_USER_DEFINED subtype：对称不可读（A 段实测该类型
+                    // CreateMillToolBuilder 失败），不物化普通 MILL 默认刀（防 tool extra 显形）。
+                    var toolSubtype = toolType == "DRILL" ? NxTemplateKeys.ToolGroupDrill
+                        : t.Params == null || t.Params.Count == 0 ? NxTemplateKeys.ToolGroupMillUserDefined
+                        : NxTemplateKeys.ToolGroupMill;
+                    // find-or-create：优先按原件组名复用模板同名组（E3 实测：模板工件组如
+                    // NONE 参数不可读，按名复用保持两侧同构——左侧 type-less 条目重建后仍挂
+                    // 同名组，导出对称缺失，不再物化默认刀）；无原名（旧合同）或模板无同名
+                    // → 用原名新建（新建 part 模板树仅 NONE，无 MILL_USER_DEFINED 等工件组）。
+                    var lookupName = string.IsNullOrEmpty(t.SourceName) ? t.Name : t.SourceName;
+                    var toolGroup = FindChildGroup(toolRoot, lookupName);
+                    if (toolGroup == null)
+                    {
+                        toolGroup = camSetup.CAMGroupCollection.CreateTool(toolRoot,
+                            NxTemplateKeys.SetupFamily, toolSubtype, UseDefaultGroup, lookupName);
+                    }
                     SetToolParams(camSetup, toolGroup, toolType, t.Params, diag);
                     toolByName[t.Name] = toolGroup;
                     break;
@@ -159,7 +172,7 @@ namespace Autocam.Nx.Adapter.Rebuild
                         toolByName[o.ToolGroupName],
                         geometryByName[o.GeometryGroupName],
                         NxTemplateKeys.SetupFamily, opSubtype, UseDefaultOp, o.Name);
-                    SetOperationParams(camSetup, op, o.Params, diag);
+                    SetOperationParams(camSetup, op, o.Params, o.PlanOperationType, diag);
                     break;
             }
         }
@@ -168,16 +181,19 @@ namespace Autocam.Nx.Adapter.Rebuild
 
         private static void SetToolParams(CAMSetup camSetup, NCGroup toolGroup, string toolType, Dictionary<string, object> planParams, DiagnosticsCollector diag)
         {
+            // 模板工件组（NONE/MILL_USER_DEFINED 等，E3 实测 CreateMillToolBuilder 不可用）：
+            // 参数空 → 零 Set 调用（对称缺失语义——两侧同挂同名组同不可读，导出对称缺项）。
+            // 注意必须在 CreateXxxToolBuilder 之前短路（对工件组调用会抛异常）。
+            if (planParams == null || planParams.Count == 0)
+            {
+                return;
+            }
             object builder = null;
             try
             {
                 builder = toolType == "DRILL"
                     ? camSetup.CAMGroupCollection.CreateDrillStdToolBuilder(toolGroup)
                     : camSetup.CAMGroupCollection.CreateMillToolBuilder(toolGroup);
-                if (planParams == null)
-                {
-                    return;
-                }
                 foreach (var pair in NxParamPaths.Tool)
                 {
                     if (planParams.TryGetValue(pair.Key, out var value))
@@ -187,6 +203,11 @@ namespace Autocam.Nx.Adapter.Rebuild
                 }
                 CommitAndDestroy(builder);
                 builder = null;
+            }
+            catch (Exception ex)
+            {
+                diag.Warning("TOOL_PARAMS_SKIPPED",
+                    "刀具组 " + toolGroup.Name + " 参数写入不可用（builder 创建/提交失败），跳过（对称缺失显形）: " + ex.Message);
             }
             finally
             {
@@ -275,7 +296,7 @@ namespace Autocam.Nx.Adapter.Rebuild
             }
         }
 
-        private static void SetOperationParams(CAMSetup camSetup, NXOpen.CAM.Operation op, List<SetParam> planParams, DiagnosticsCollector diag)
+        private static void SetOperationParams(CAMSetup camSetup, NXOpen.CAM.Operation op, List<SetParam> planParams, string planType, DiagnosticsCollector diag)
         {
             OperationBuilder builder = null;
             try
@@ -283,6 +304,13 @@ namespace Autocam.Nx.Adapter.Rebuild
                 builder = camSetup.CAMOperationCollection.CreateBuilder(op);
                 foreach (var param in planParams)
                 {
+                    if (NxWriteProtection.IsProtected(planType, param.Name))
+                    {
+                        diag.Warning("PARAM_WRITE_PROTECTED",
+                            string.Format("参数 {0} 对类型 {1} 为 NX 写保护（NxWriteProtection 表），跳过写入——重建值由 NX 模板固化，比较侧按同表豁免（M3_Probe E 段实证）",
+                                param.Name, planType));
+                        continue;
+                    }
                     if (!NxParamPaths.Operation.TryGetValue(param.Name, out var path))
                     {
                         continue;   // 未入表字段：不 Set（继承语义——plan-executor.md §3.3）

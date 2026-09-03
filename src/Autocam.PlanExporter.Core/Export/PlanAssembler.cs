@@ -46,7 +46,7 @@ namespace Autocam.PlanExporter.Core.Export
                     continue;
                 }
                 var group = r.Op.ToolGroup;
-                var entry = new ToolEntry { ToolId = ids.Next("T") };
+                var entry = new ToolEntry { ToolId = ids.Next("T"), Name = group.Name };
                 foreach (var field in ParamRegistry.ToolFields)
                 {
                     if (!group.Params.TryGetValue(field, out var value))

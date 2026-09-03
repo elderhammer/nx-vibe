@@ -231,7 +231,7 @@ namespace Autocam.Nx.Adapter.Journals
                     + " 刀具 / " + plan2.Setups.Count + " setup / workplan " + plan2.Workplan.Elements.Count + " 元素");
                 sb.AppendLine("plan″ schema 校验错误数: " + validator.Validate(plan2Json).Count);
 
-                var compare = PlanComparePipeline.Compare(plan, plan2, new CompareContext());
+                var compare = PlanComparePipeline.Compare(plan, plan2, BuildLoopCompareContext());
                 var reportJson = ReportSerializer.Serialize(compare);
                 sb.AppendLine("④ deviations: " + compare.Deviations.Count);
                 sb.AppendLine("④ scores: structure=" + compare.Scores.StructureConsistency
@@ -252,6 +252,21 @@ namespace Autocam.Nx.Adapter.Journals
             var report = sb.ToString();
             File.WriteAllText(Path.Combine(outDir, "m3_loop.txt"), report);
             return report;
+        }
+
+        /// <summary>
+        /// 闭环比较上下文：注入 NX 写保护表（NxWriteProtection，M3_Probe E 段实测）——
+        /// 比较侧按 (工序类型, 字段) 结构化豁免，与执行侧跳过写入同源同表（绝不静默）。
+        /// </summary>
+        private static CompareContext BuildLoopCompareContext()
+        {
+            var profile = new CapabilityProfile();
+            foreach (var pair in Autocam.Nx.Adapter.Policies.NxWriteProtection.FieldsByPlanType)
+            {
+                profile.UnwritableByPlanType[pair.Key] =
+                    new System.Collections.Generic.HashSet<string>(pair.Value);
+            }
+            return new CompareContext { RightCapability = profile };
         }
 
         /// <summary>
