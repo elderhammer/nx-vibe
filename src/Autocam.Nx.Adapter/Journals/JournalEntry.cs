@@ -186,6 +186,7 @@ namespace Autocam.Nx.Adapter.Journals
                 NxSnapshotReader.Read(sourceCamSetup, Path.GetFileNameWithoutExtension(partPath), partPath, diag1),
                 new CapabilityProfile());
             var planJson = PlanSerializer.Serialize(plan);
+            File.WriteAllText(Path.Combine(outDir, "plan.json"), planJson);
             sb.AppendLine("① 导出 plan: " + plan.Operations.Count + " 工序 / " + plan.Resources.Tools.Count
                 + " 刀具 / " + plan.Setups.Count + " setup / workplan " + plan.Workplan.Elements.Count + " 元素");
             sb.AppendLine("plan schema 校验错误数: " + validator.Validate(planJson).Count);
@@ -206,7 +207,12 @@ namespace Autocam.Nx.Adapter.Journals
                 }
                 try
                 {
-                    session.Parts.Work.SaveAs(Path.Combine(outDir, "parts", "rebuild_part.prt"));
+                    var prjPath = Path.Combine(outDir, "parts", "rebuild_part.prt");
+                    if (File.Exists(prjPath))
+                    {
+                        File.Delete(prjPath);   // 旧 prj′ 覆盖（重复跑 M3 时 SaveAs 撞名必失败）
+                    }
+                    session.Parts.Work.SaveAs(prjPath);
                     sb.AppendLine("② prj′ 已落盘: rebuild_part.prt");
                 }
                 catch (Exception saveEx)

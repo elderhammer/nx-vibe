@@ -182,7 +182,7 @@ namespace Autocam.Nx.Adapter.Rebuild
                 {
                     if (planParams.TryGetValue(pair.Key, out var value))
                     {
-                        SetLeaf(ValueExtractor.ReadPath(builder, pair.Value), value, diag, pair.Key);
+                        SetParamPath(builder, pair.Value, value, diag, pair.Key);
                     }
                 }
                 CommitAndDestroy(builder);
@@ -287,7 +287,7 @@ namespace Autocam.Nx.Adapter.Rebuild
                     {
                         continue;   // 未入表字段：不 Set（继承语义——plan-executor.md §3.3）
                     }
-                    SetLeaf(ValueExtractor.ReadPath(builder, path), param.Value, diag, param.Name);
+                    SetParamPath(builder, path, param.Value, diag, param.Name);
                 }
                 builder.Commit();
                 builder.Destroy();
@@ -354,15 +354,150 @@ namespace Autocam.Nx.Adapter.Rebuild
                     prop.SetValue(leaf, b, null);
                 }
             }
-            // 复合对象（stepover{mode,value} 等）：递归子键（点分路径由映射表覆盖到叶子层）
+            // 复合对象（stepover{mode,value} 等）：递归子键（子键可能仍是裸值 → 走 SetParamPath）
             if (value is Dictionary<string, object> dict)
             {
                 foreach (var pair in dict)
                 {
-                    var sub = ValueExtractor.ReadPath(leaf, pair.Key);
-                    SetLeaf(sub, pair.Value, diag, paramName + "." + pair.Key);
+                    SetParamPath(leaf, pair.Key, pair.Value, diag, paramName + "." + pair.Key);
                 }
             }
+        }
+
+        /// <summary>
+        /// 沿点分路径写参数（NxParamPaths 路径以 OperationBuilder 为根）。
+        /// 末段叶子：引用包装（Inheritable*Builder/StepoverBuilder 等，带 Value 属性）
+        /// → SetLeaf 原地写；裸值（枚举/double/bool/string——M3_Probe 实证 CutOrder 裸枚举、
+        /// BoundaryInTol 裸 double）→ 装箱对象改不动，须经父属性直接写回。
+        /// 路径不可达/复合体未实例化 → 跳过（plan″ 以缺字段显形，不静默伪造）。
+        /// </summary>
+        private static void SetParamPath(object root, string path, object value, DiagnosticsCollector diag, string paramName)
+        {
+            if (root == null || string.IsNullOrEmpty(path) || value == null)
+            {
+                return;
+            }
+            var segments = path.Split('.');
+            object container = root;
+            for (var i = 0; i < segments.Length - 1; i++)
+            {
+                container = ReadSegment(container, segments[i]);
+                if (container == null)
+                {
+                    return;
+                }
+            }
+            var prop = container.GetType().GetProperty(segments[segments.Length - 1]);
+            if (prop == null)
+            {
+                return;
+            }
+            var propType = prop.PropertyType;
+            object leaf;
+            try
+            {
+                leaf = prop.GetValue(container, null);
+            }
+            catch (Exception)
+            {
+                return;
+            }
+            if (leaf != null && !propType.IsValueType && propType != typeof(string))
+            {
+                // 引用叶子（Inheritable*Builder/StepoverBuilder 等包装）：原地写（旧 SetLeaf 路径）。
+                // 注意不可检查 prop.CanWrite——NX builder 参数属性常为 get-only（M3 实测
+                // MillCutParameters.PartStock 只读），检查会把本可写的包装短路。
+                SetLeaf(leaf, value, diag, paramName);
+                return;
+            }
+            if (value is Dictionary<string, object> dict)
+            {
+                if (leaf == null)
+                {
+                    return;   // 复合包装未实例化：不可构造，跳过
+                }
+                foreach (var pair in dict)
+                {
+                    SetParamPath(leaf, pair.Key, pair.Value, diag, paramName + "." + pair.Key);
+                }
+                return;
+            }
+            // 裸值/枚举（M3_Probe 实证 CutOrder 裸枚举、BoundaryInTol 裸 double）：
+            // 装箱对象改不动，须经父属性写回（此处才需要 CanWrite）
+            if (!prop.CanWrite)
+            {
+                return;
+            }
+            var converted = ConvertScalarFor(propType, value, diag, paramName);
+            if (converted != null)
+            {
+                prop.SetValue(container, converted, null);
+            }
+        }
+
+        private static object ReadSegment(object o, string name)
+        {
+            if (o == null)
+            {
+                return null;
+            }
+            try
+            {
+                var p = o.GetType().GetProperty(name);
+                return p == null ? null : p.GetValue(o, null);
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
+
+        /// <summary>裸值转换：数值/double/int、bool、string、枚举（宽松解析）；类型不合 → null（跳过）。</summary>
+        private static object ConvertScalarFor(Type targetType, object value, DiagnosticsCollector diag, string paramName)
+        {
+            try
+            {
+                if (targetType.IsEnum)
+                {
+                    if (value is string s)
+                    {
+                        var parsed = ParseEnumValue(targetType, s);
+                        if (parsed == null)
+                        {
+                            diag.Warning("PARAM_SET_FAILED",
+                                string.Format("参数 {0} 值 {1} 无法映射到 NX 枚举 {2}（宽松匹配后仍无），跳过该参数（plan″ 将以缺字段显形）",
+                                    paramName, s, targetType.Name));
+                        }
+                        return parsed;
+                    }
+                    if (value is int || value is long)
+                    {
+                        return Enum.ToObject(targetType, Convert.ToInt32(value));
+                    }
+                    return null;
+                }
+                if (targetType == typeof(double) && (value is double || value is int || value is long || value is float))
+                {
+                    return Convert.ToDouble(value);
+                }
+                if (targetType == typeof(int) && (value is int || value is long))
+                {
+                    return Convert.ToInt32(value);
+                }
+                if (targetType == typeof(bool) && value is bool)
+                {
+                    return value;
+                }
+                if (targetType == typeof(string) && value is string)
+                {
+                    return value;
+                }
+            }
+            catch (Exception)
+            {
+                // 转换异常 → null → 跳过（缺字段显形）
+            }
+            return null;
         }
 
         /// <summary>
