@@ -265,12 +265,12 @@
         },
         "top_offset": { "type": "number", "description": "顶部偏置 mm（从孔口/面起算）" },
         "control_point_offset": {
-          "enum": ["TOP", "BOTTOM", "AUTO"],
-          "description": "控制点偏置方式（孔顶/孔底/自动）"
+          "enum": ["TOP", "BOTTOM", "AUTO", "NONE"],
+          "description": "控制点偏置方式（孔顶/孔底/自动；NONE = 无偏置，NX 孔工序实测 2026-09-03）"
         },
         "retract_output_mode": {
-          "enum": ["CLEARANCE_PLANE", "INCREMENTAL"],
-          "description": "退刀输出模式（退到安全平面/增量）"
+          "enum": ["CLEARANCE_PLANE", "INCREMENTAL", "ALWAYS"],
+          "description": "退刀输出模式（退到安全平面/增量；ALWAYS = 总是退刀，NX 孔工序实测 2026-09-03）"
         },
         "tool_drive_point": {
           "enum": ["TIP", "CENTER"],
