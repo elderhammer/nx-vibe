@@ -133,6 +133,20 @@ namespace Autocam.Nx.Adapter.Journals
             return WriteReport(sb, outDir, "m4_wprobe.txt");
         }
 
+        /// <summary>
+        /// M4c S0 STEP 打开探针（GUI 或 run_journal 均可——Q4 即两种模式的判读对照）：
+        /// 对照件（手编 CAM 件基线）+ STEP 主题（直开 OpenDisplay / DexManager 翻译器
+        /// 203·214·242 NewPart / CAM 宿主件 WorkPart 导入），Q1-Q3 见 NxStepOpenProbe。
+        /// 静态反射面先证（m4c_reflect*.ps1，结论入核对清单 M4c 节）；本入口只落盘运行时实证。
+        /// 输出 outDir/m4c_stepopen.txt。
+        /// </summary>
+        public static string M4cStepProbe(string controlPartPath, string stepPath, string outDir)
+        {
+            var report = Export.NxStepOpenProbe.Run(Session.GetSession(), controlPartPath, stepPath);
+            File.WriteAllText(Path.Combine(outDir, "m4c_stepopen.txt"), report);
+            return report;
+        }
+
         private static string WriteReport(StringBuilder sb, string outDir, string name)
         {
             var report = sb.ToString();
@@ -374,6 +388,180 @@ namespace Autocam.Nx.Adapter.Journals
             var report = sb.ToString();
             File.WriteAllText(Path.Combine(outDir, "m3_loop.txt"), report);
             return report;
+        }
+
+        /// <summary>
+        /// M4c 主闭环（GUI 会话跑——op 模板注册表仅 GUI 加载，同 M3Loop）：与 M3Loop 同构，
+        /// 唯一差异 = 重建载体从"另存副本"换成 STEP 直开翻译件（S0 定案：OpenDisplay 隐式翻译 +
+        /// CreateCamSetup，见 nx-journal-manual-verification.md M4c 节）。源件现导 ground truth plan
+        /// → STEP 载体重建 → 再导出 plan″ → Compare(plan, plan″)。
+        /// 输出 outDir/m4c_loop.txt + m4c_report.json + m4c_plan.json + m4c_plan_rebuilt.json + parts/rebuild_step.prt。
+        /// </summary>
+        public static string M4cLoop(string sourcePartPath, string stepPath, string planSchemaPath, string reportSchemaPath, string outDir)
+        {
+            var sb = new StringBuilder();
+            var session = Session.GetSession();
+            sb.AppendLine("M4c 主闭环（STEP 载体）: 源=" + sourcePartPath + " 载体=" + stepPath);
+
+            var validator = PlanSchemaValidator.LoadAsync(planSchemaPath).GetAwaiter().GetResult();
+            var reportValidator = PlanSchemaValidator.LoadAsync(reportSchemaPath).GetAwaiter().GetResult();
+
+            var sourceCam = OpenOrFindSource(session, sourcePartPath, sb);
+            if (sourceCam == null)
+            {
+                sb.AppendLine("FATAL: 未找到源零件 " + sourcePartPath + "（M4c 闭环中止）");
+                var fail = sb.ToString();
+                File.WriteAllText(Path.Combine(outDir, "m4c_loop.txt"), fail);
+                return fail;
+            }
+
+            // ① 导出 ground truth plan（源件 = 手编工程）
+            var diag1 = new DiagnosticsCollector();
+            var plan = PlanExportPipeline.Export(
+                NxSnapshotReader.Read(sourceCam, Path.GetFileNameWithoutExtension(sourcePartPath), sourcePartPath, diag1),
+                new CapabilityProfile());
+            var planJson = PlanSerializer.Serialize(plan);
+            File.WriteAllText(Path.Combine(outDir, "m4c_plan.json"), planJson);
+            sb.AppendLine("① 导出 plan: " + plan.Operations.Count + " 工序 / " + plan.Resources.Tools.Count
+                + " 刀具 / " + plan.Setups.Count + " setup / workplan " + plan.Workplan.Elements.Count + " 元素");
+            sb.AppendLine("plan schema 校验错误数: " + validator.Validate(planJson).Count);
+
+            // ② STEP 载体重建（S0 定案路径）
+            var build = Autocam.PlanExecutor.Core.Build.PlanExecutorPipeline.Build(plan, new CapabilityProfile());
+            sb.AppendLine("② 命令数: " + build.Commands.Count);
+            try
+            {
+                var camSetup = OpenStepCarrier(session, stepPath, sb);
+                if (camSetup == null)
+                {
+                    sb.AppendLine("② FATAL: STEP 载体不可用（M4c 闭环中止）");
+                    var fail2 = sb.ToString();
+                    File.WriteAllText(Path.Combine(outDir, "m4c_loop.txt"), fail2);
+                    return fail2;
+                }
+                sb.AppendLine("② STEP 载体根成员: " + DumpViewRoots(camSetup));
+                var diag2 = new DiagnosticsCollector();
+                Autocam.Nx.Adapter.Rebuild.NxCommandExecutor.Execute(
+                    camSetup, build.Commands, diag2, msg => sb.AppendLine("  " + msg));
+                sb.AppendLine("② 命令执行: 全部完成（" + build.Commands.Count + " 条）");
+                foreach (var d in diag2.Entries)
+                {
+                    sb.AppendLine("  [执行诊断] " + d.Level + " " + d.Code + " " + d.Detail);
+                }
+                var prjPath = Path.Combine(outDir, "parts", "rebuild_step.prt");
+                try
+                {
+                    if (File.Exists(prjPath))
+                    {
+                        File.Delete(prjPath);
+                    }
+                    session.Parts.Work.SaveAs(prjPath);
+                    sb.AppendLine("② prj′ 已落盘: rebuild_step.prt");
+                }
+                catch (Exception saveEx)
+                {
+                    sb.AppendLine("② prj′ 落盘失败: " + saveEx.Message);
+                }
+
+                // ③ 再导出 plan″ → Compare
+                var diag3 = new DiagnosticsCollector();
+                var plan2 = PlanExportPipeline.Export(
+                    NxSnapshotReader.Read(camSetup, "rebuild_step", Path.Combine(outDir, "parts", "rebuild_step.prt"), diag3),
+                    new CapabilityProfile());
+                var plan2Json = PlanSerializer.Serialize(plan2);
+                File.WriteAllText(Path.Combine(outDir, "m4c_plan_rebuilt.json"), plan2Json);
+                sb.AppendLine("③ 导出 plan″: " + plan2.Operations.Count + " 工序 / " + plan2.Resources.Tools.Count
+                    + " 刀具 / " + plan2.Setups.Count + " setup / workplan " + plan2.Workplan.Elements.Count + " 元素");
+                sb.AppendLine("plan″ schema 校验错误数: " + validator.Validate(plan2Json).Count);
+
+                var compare = PlanComparePipeline.Compare(plan, plan2, BuildLoopCompareContext());
+                var reportJson = ReportSerializer.Serialize(compare);
+                sb.AppendLine("④ deviations: " + compare.Deviations.Count);
+                sb.AppendLine("④ scores: structure=" + compare.Scores.StructureConsistency
+                    + " param=" + compare.Scores.ParamDeviationMean
+                    + " geometry=" + compare.Scores.GeometryMatchRate);
+                foreach (var d in compare.Diagnostics)
+                {
+                    sb.AppendLine("  [比较诊断] " + d.Level + " " + d.Code + " " + d.Detail);
+                }
+                sb.AppendLine("报告 schema 校验错误数: " + reportValidator.Validate(reportJson).Count);
+                File.WriteAllText(Path.Combine(outDir, "m4c_report.json"), reportJson);
+            }
+            catch (Exception ex)
+            {
+                sb.AppendLine("② 重建失败: " + ex.Message);
+            }
+
+            var report = sb.ToString();
+            File.WriteAllText(Path.Combine(outDir, "m4c_loop.txt"), report);
+            return report;
+        }
+
+        /// <summary>
+        /// M4c 载体（S0 定案）：OpenDisplay 直开 STEP（隐式翻译）→ 设 Work → 无 CAMSetup 则挂
+        /// mill_planar。残留会话容错（直开抛"已存在"则按 FullPath 定位）。无 CAM 件读 .CAMSetup
+        /// 属性即抛（非返 null），须吞掉再 CreateCamSetup。
+        /// </summary>
+        private static NXOpen.CAM.CAMSetup OpenStepCarrier(Session session, string stepPath, System.Text.StringBuilder sb)
+        {
+            Part part = null;
+            try
+            {
+                PartLoadStatus loadStatus;
+                part = session.Parts.OpenDisplay(stepPath, out loadStatus);
+                session.Parts.SetWork(part);
+                sb.AppendLine("STEP 直开（隐式翻译）: ok");
+            }
+            catch (Exception ex)
+            {
+                sb.AppendLine("STEP 直开失败: " + ex.Message);
+                try
+                {
+                    foreach (Part p in session.Parts)
+                    {
+                        if (string.Equals(p.FullPath, stepPath, StringComparison.OrdinalIgnoreCase))
+                        {
+                            part = p;
+                            session.Parts.SetWork(p);
+                            sb.AppendLine("STEP 件已开会话，定位设 Work: ok");
+                            break;
+                        }
+                    }
+                }
+                catch (Exception enumEx)
+                {
+                    sb.AppendLine("枚举已开零件失败: " + enumEx.Message);
+                }
+                if (part == null)
+                {
+                    return null;
+                }
+            }
+            try
+            {
+                SessionBootstrap.EnsureCamSession(session);
+                NXOpen.CAM.CAMSetup existing = null;
+                try
+                {
+                    existing = part.CAMSetup;
+                }
+                catch (Exception)
+                {
+                    // 无 CAMSetup：getter 抛——视为无，继续 CreateCamSetup
+                }
+                if (existing != null)
+                {
+                    return existing;
+                }
+                var setup = part.CreateCamSetup(SessionBootstrap.CamSetupTemplate);
+                sb.AppendLine("STEP 载体挂 CAMSetup(" + SessionBootstrap.CamSetupTemplate + "): ok");
+                return setup;
+            }
+            catch (Exception ex)
+            {
+                sb.AppendLine("STEP 载体挂 CAMSetup 失败: " + ex.Message);
+                return null;
+            }
         }
 
         /// <summary>
